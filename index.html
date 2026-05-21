@@ -65,8 +65,8 @@
         
         loader.load(model, (g) => { 
             car = g.scene; 
-            car.scale.set(0.15, 0.15, 0.15); 
-            car.position.y = 0.01; // Lekkie uniesienie auta nad asfalt
+            car.scale.set(0.10, 0.10, 0.10); 
+            car.position.y = 0.1; // Lekkie uniesienie auta nad asfalt
             s.add(car); 
         });
         loader.load('mapa1.glb', (g) => { g.scene.scale.set(10, 10, 10); s.add(g.scene); });
