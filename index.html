@@ -2,9 +2,11 @@
 <html lang="pl">
 <head>
     <meta charset="UTF-8">
-    <title>Race Master 3D - Draco Fixed</title>
+    <title>Race Master 3D - Full Pro</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #000; }
+        body { margin: 0; overflow: hidden; background: #000; font-family: sans-serif; }
+        #menu { position: absolute; width: 100%; height: 100%; background: #000; color: white; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 10; }
+        #ui { position: absolute; top: 20px; left: 20px; color: white; pointer-events: none; font-size: 20px; display: none; }
     </style>
     <script type="importmap">
         { "imports": {
@@ -14,47 +16,78 @@
     </script>
 </head>
 <body>
+    <div id="menu">
+        <h1>RACE MASTER 3D</h1>
+        <button onclick="startGame('bmw_m4.glb')">START BMW</button>
+        <button onclick="startGame('porsche.glb')">START PORSCHE</button>
+        <p>V - Kamera | SHIFT - Bieg wyżej | CTRL - Bieg niżej</p>
+    </div>
+    <div id="ui">
+        <div id="speed">0 km/h</div>
+        <div id="gear">Bieg: 1 (Automat)</div>
+    </div>
+
     <script type="module">
         import * as THREE from 'three';
         import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
         import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 
-        const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x87CEEB);
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 10000);
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        document.body.appendChild(renderer.domElement);
+        let scene, camera, renderer, car, gear = 1, viewMode = 0, speed = 0, isAuto = true;
+        const keys = { w: false, s: false, a: false, d: false };
 
-        scene.add(new THREE.AmbientLight(0xffffff, 1.0));
+        window.startGame = (model) => {
+            document.getElementById('menu').style.display = 'none';
+            document.getElementById('ui').style.display = 'block';
+            
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x87CEEB);
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 10000);
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.body.appendChild(renderer.domElement);
+            scene.add(new THREE.AmbientLight(0xffffff, 1.2));
 
-        // KONFIGURACJA DRACO (kluczowe dla Twojego modelu!)
-        const dracoLoader = new DRACOLoader();
-        dracoLoader.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/');
-        const loader = new GLTFLoader();
-        loader.setDRACOLoader(dracoLoader);
+            // NAPRAWA DRACO
+            const draco = new DRACOLoader().setDecoderPath('https://www.gstatic.com/draco/v1/decoders/');
+            const loader = new GLTFLoader().setDRACOLoader(draco);
 
-        // ŁADOWANIE MAPY (Skala 10x)
-        loader.load('./mapa1.glb', (gltf) => {
-            const map = gltf.scene;
-            map.scale.set(10, 10, 10);
-            scene.add(map);
-        });
+            loader.load('./mapa1.glb', (gltf) => { gltf.scene.scale.set(5, 5, 5); scene.add(gltf.scene); });
+            loader.load('./' + model, (gltf) => { car = gltf.scene; scene.add(car); });
 
-        // ŁADOWANIE AUTA
-        let car;
-        loader.load('./bmw_m4.glb', (gltf) => {
-            car = gltf.scene;
-            scene.add(car);
-        });
+            window.onkeydown = (e) => {
+                if(keys.hasOwnProperty(e.key.toLowerCase())) keys[e.key.toLowerCase()] = true;
+                if(e.key === 'v') viewMode = (viewMode + 1) % 2;
+                if(e.key === 'Shift') { isAuto = false; gear = Math.min(gear + 1, 6); }
+                if(e.key === 'Control') { isAuto = false; gear = Math.max(gear - 1, 1); }
+            };
+            window.onkeyup = (e) => { if(keys.hasOwnProperty(e.key.toLowerCase())) keys[e.key.toLowerCase()] = false; };
+            
+            animate();
+        };
 
-        camera.position.set(0, 50, 100);
-        
         function animate() {
             requestAnimationFrame(animate);
+            if(car) {
+                if(keys.w) speed += (0.001 * gear);
+                else if(keys.s) speed -= 0.002;
+                else speed *= 0.98;
+                if(keys.a) car.rotation.y += 0.04;
+                if(keys.d) car.rotation.y -= 0.04;
+                
+                car.position.x += Math.sin(car.rotation.y) * speed;
+                car.position.z += Math.cos(car.rotation.y) * speed;
+
+                // Kamera
+                const offset = viewMode === 0 ? new THREE.Vector3(0, 0.6, 0.5) : new THREE.Vector3(0, 3, 8);
+                offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), car.rotation.y);
+                camera.position.lerp(car.position.clone().add(offset), 0.1);
+                camera.lookAt(car.position.clone().add(new THREE.Vector3(0, 0, 10).applyAxisAngle(new THREE.Vector3(0,1,0), car.rotation.y)));
+                
+                document.getElementById('speed').innerText = "Prędkość: " + Math.round(Math.abs(speed)*2000) + " km/h";
+                document.getElementById('gear').innerText = "Bieg: " + gear + (isAuto ? " (Auto)" : " (Manual)");
+            }
             renderer.render(scene, camera);
         }
-        animate();
     </script>
 </body>
 </html>
