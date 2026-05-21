@@ -55,7 +55,6 @@
 
     let car, peer = new Peer(), conn, carData, vel = 0, k = {};
 
-    // Inicjalizacja loadera Draco
     const dracoLoader = new DRACOLoader();
     dracoLoader.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/');
     const loader = new GLTFLoader();
@@ -73,8 +72,20 @@
         document.getElementById('menu').classList.add('hidden');
         document.getElementById('ui').classList.remove('hidden');
         
-        loader.load(model, (g) => { car = g.scene; car.scale.set(0.01, 0.01, 0.01); s.add(car); });
-        loader.load('mapa1.glb', (g) => { g.scene.scale.set(10, 10, 10); s.add(g.scene); });
+        loader.load(model, (g) => { 
+            car = g.scene; 
+            car.scale.set(0.01, 0.01, 0.01); 
+            // Ustawienie auta przodem do przodu (zależnie od modelu, jeśli jedzie tyłem, zmień na 0)
+            car.rotation.y = Math.PI; 
+            s.add(car); 
+        });
+
+        loader.load('mapa1.glb', (g) => { 
+            g.scene.scale.set(10, 10, 10); 
+            // Obrót mapy o 180 stopni
+            g.scene.rotation.y = Math.PI; 
+            s.add(g.scene); 
+        });
         animate();
     };
 
@@ -100,8 +111,12 @@
 
             if(conn && conn.open) conn.send({p: car.position, r: car.rotation});
             
-            c.position.lerp(car.position.clone().add(new THREE.Vector3(0, 0.05, 0.15).applyAxisAngle(new THREE.Vector3(0,1,0), car.rotation.y)), 0.1);
+            // Kamera za autem
+            let camOffset = new THREE.Vector3(0, 0.05, 0.15);
+            camOffset.applyAxisAngle(new THREE.Vector3(0,1,0), car.rotation.y);
+            c.position.lerp(car.position.clone().add(camOffset), 0.1);
             c.lookAt(car.position);
+            
             document.getElementById('hud').innerText = `Prędkość: ${Math.floor(vel * 5000)} km/h`;
         }
         r.render(s, c);
