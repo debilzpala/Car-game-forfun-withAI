@@ -89,7 +89,7 @@
             car.position.z += Math.cos(car.rotation.y) * vel;
 
             // Kamera sztywno za autem (skala 0.01 wymaga małych wartości)
-            let camOffset = new THREE.Vector3(0, 0.03, -0.08).applyAxisAngle(new THREE.Vector3(0,1,0), car.rotation.y);
+            let camOffset = new THREE.Vector3(0, 0.2, -0.08).applyAxisAngle(new THREE.Vector3(0,1,0), car.rotation.y);
             c.position.copy(car.position).add(camOffset);
             c.lookAt(car.position.clone().add(new THREE.Vector3(0, 0, 0.05).applyAxisAngle(new THREE.Vector3(0,1,0), car.rotation.y)));
 
