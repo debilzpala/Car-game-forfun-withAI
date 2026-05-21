@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Gra 3D - Racing Master P2P</title>
+    <title>Gra 3D - Multiplayer P2P z Lokalnymi Plikami</title>
     <style>
         * {
             margin: 0;
@@ -609,28 +609,26 @@
         let connections = [];
         let remotePlayers = {}; 
         let myPeerId = '';
+        let pendingRemotesToLoad = []; // Kolejka modeli do załadowania po inicjalizacji sceny
         
         // Three.js Variables
-        let scene, camera, renderer, car, road;
+        let scene, camera, renderer, car;
         let gltfLoader, dracoLoader;
 
         // Physics & Controls Variables
-        let currentSpeed = 0; // w jednostkach silnika
+        let currentSpeed = 0; 
         let turnSpeed = 0.035;
         let currentGear = 1;
         let isManualTransmission = false;
-        let cameraViewMode = 'TPP'; // TPP lub FPP
+        let cameraViewMode = 'TPP'; 
         let currentRpm = 1000;
         
-        // Input tracking object
         const keys = { forward: false, backward: false, left: false, right: false };
         
-        // Mobile runtime interaction states
         let mobileGas = false;
         let mobileBrake = false;
         let mobileTurnForce = 0;
 
-        // Mobile Controls Safe Declarations
         let isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
         const mobileControlsElement = document.getElementById('mobileControls');
         const camBtnMobileElement = document.getElementById('camBtnMobile');
@@ -657,7 +655,6 @@
         const camModeDisplay = document.getElementById('camMode');
         const popupElement = document.getElementById('popup');
         
-        // Specyfikacja aut (vMax w km/h, biegi oraz pozycja kamery ze środka)
         const carConfigs = {
             'bmw_m5': {
                 path: 'bmw_m4.glb',
@@ -673,7 +670,6 @@
             }
         };
         
-        // Map configurations
         const mapConfigs = {
             'miasto': {
                 path: 'mapa1.glb'
@@ -686,25 +682,16 @@
             initMobileControls();
         }
         
-        // --- OBSŁUGA KLAWIATURY, MYSZY I ZMIANY TRYBÓW ---
+        // --- INPUT HANDLING ---
         window.addEventListener('keydown', (e) => {
             if (gameState !== 'game') return;
-            
-            // Jazda
             if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') keys.forward = true;
             if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') keys.backward = true;
             if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keys.left = true;
             if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.right = true;
             
-            // Klawisz C - Zmiana Kamery (TPP / FPP)
-            if (e.key === 'c' || e.key === 'C') {
-                toggleCameraView();
-            }
-            
-            // Klawisz Q - Zmiana Skrzyni Biegów (AUTO / MANUAL)
-            if (e.key === 'q' || e.key === 'Q') {
-                toggleTransmissionMode();
-            }
+            if (e.key === 'c' || e.key === 'C') toggleCameraView();
+            if (e.key === 'q' || e.key === 'Q') toggleTransmissionMode();
         });
 
         window.addEventListener('keyup', (e) => {
@@ -714,17 +701,15 @@
             if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.right = false;
         });
 
-        // Obsługa kliknięć myszy dla Manualnej Skrzyni Biegów
         window.addEventListener('mousedown', (e) => {
             if (gameState !== 'game' || !isManualTransmission) return;
-            
             const config = carConfigs[selectedCar];
-            if (e.button === 0) { // Lewy Przycisk Myszy - Downshift (Bieg w dół)
+            if (e.button === 0) { 
                 if (currentGear > 1) {
                     currentGear--;
                     triggerPopup(`Bieg: ${currentGear}`);
                 }
-            } else if (e.button === 2) { // Prawy Przycisk Myszy - Upshift (Bieg w górę)
+            } else if (e.button === 2) { 
                 if (currentGear < config.maxGears) {
                     currentGear++;
                     triggerPopup(`Bieg: ${currentGear}`);
@@ -732,11 +717,8 @@
             }
         });
 
-        // Blokowanie kontekstowego menu pod prawym przyciskiem myszy
         window.addEventListener('contextmenu', (e) => {
-            if (gameState === 'game') {
-                e.preventDefault();
-            }
+            if (gameState === 'game') e.preventDefault();
         });
 
         if(camBtnMobileElement) {
@@ -763,7 +745,7 @@
             }
         }
 
-        // --- OBSŁUGA MOBILNA ---
+        // --- MOBILE CONTROLS ---
         function initMobileControls() {
             const gasPedal = document.getElementById('gasPedal');
             const brakePedal = document.getElementById('brakePedal');
@@ -802,7 +784,7 @@
             });
         }
         
-        // --- SEKCJA SIECIOWA (PEERJS P2P) ---
+        // --- PEERJS NETWORKING ---
         function initPeer(isRoomHost, targetRoomId = null) {
             peer = new Peer();
             
@@ -839,7 +821,7 @@
             });
             conn.on('data', (data) => { handleNetworkData(data, conn.peer); });
             conn.on('close', () => {
-                if (remotePlayers[conn.peer] && remotePlayers[conn.peer].mesh) {
+                if (remotePlayers[conn.peer] && remotePlayers[conn.peer].mesh && scene) {
                     scene.remove(remotePlayers[conn.peer].mesh);
                 }
                 delete remotePlayers[conn.peer];
@@ -861,7 +843,12 @@
                 startGame();
             }
             if (data.type === 'init_car') {
-                spawnRemotePlayerCar(senderPeerId, data.carType);
+                // Zapobiegamy błędowi ładowania przed utworzeniem sceny
+                if (!scene || !gltfLoader) {
+                    pendingRemotesToLoad.push({ id: senderPeerId, carType: data.carType });
+                } else {
+                    spawnRemotePlayerCar(senderPeerId, data.carType);
+                }
             }
             if (data.type === 'update_position') {
                 if (remotePlayers[senderPeerId] && remotePlayers[senderPeerId].mesh) {
@@ -875,11 +862,11 @@
         function spawnRemotePlayerCar(peerId, carType) {
             if (remotePlayers[peerId]) return; 
             remotePlayers[peerId] = { carType: carType, mesh: null };
-            if (gltfLoader) {
+            if (gltfLoader && scene) {
                 gltfLoader.load(carConfigs[carType].path, (gltf) => {
                     const remoteMesh = gltf.scene;
                     remoteMesh.scale.set(0.5, 0.5, 0.5);
-                    remoteMesh.position.set(3, 0.5, 0); 
+                    remoteMesh.position.set(3, 0.4, 0); 
                     remoteMesh.rotation.y = Math.PI; 
                     scene.add(remoteMesh);
                     remotePlayers[peerId].mesh = remoteMesh;
@@ -940,6 +927,8 @@
             } else {
                 gameState = 'loading'; carSelection.style.display = 'none'; loadingScreen.style.display = 'flex';
                 if(loadingText) loadingText.textContent = "Oczekiwanie aż Host wybierze mapę...";
+                // Poinformowanie hosta o wybranym aucie
+                broadcast({ type: 'init_car', carType: selectedCar });
             }
         });
         
@@ -958,7 +947,7 @@
             setTimeout(() => { errorMessage.style.display = 'none'; }, 5000);
         }
         
-        // --- GAME ENGINE (THREE.JS & PHYSICS) ---
+        // --- GAME ENGINE & PHYSICS ---
         function startGame() {
             gameState = 'game'; loadingScreen.style.display = 'none'; canvasContainer.style.display = 'block';
             initGame();
@@ -989,17 +978,22 @@
             gltfLoader = new THREE.GLTFLoader();
             gltfLoader.setDRACOLoader(dracoLoader);
             
+            // Rejestrujemy zaległe modele graczy, którzy dołączyli przed startem sceny
+            pendingRemotesToLoad.forEach(item => {
+                spawnRemotePlayerCar(item.id, item.carType);
+            });
+            pendingRemotesToLoad = [];
+
             const carConfig = carConfigs[selectedCar];
             gltfLoader.load(carConfig.path, (gltf) => {
                     car = gltf.scene;
                     car.scale.set(0.5, 0.5, 0.5);
-                    car.position.set(isHost ? 0 : 3, 0.4, 0); 
+                    car.position.set(isHost ? -2 : 2, 0.4, 0); 
                     car.rotation.y = Math.PI;
                     car.castShadow = true;
                     scene.add(car);
                     
                     broadcast({ type: 'init_car', carType: selectedCar });
-                    connections.forEach(conn => conn.send({ type: 'init_car', carType: selectedCar }));
                     loadMap(gltfLoader);
                 },
                 undefined,
@@ -1018,15 +1012,13 @@
                 if (car) {
                     const config = carConfigs[selectedCar];
                     
-                    // --- MNOŻNIKI I PRZEŁOŻENIA DLA BIEGÓW ---
-                    // Każdy wyższy bieg ma większą prędkość maksymalną przypisaną do niego
-                    const maxSpeedLimitEngine = config.maxSpeedKmh / 220; // Przelicznik na jednostki silnika
+                    // Przelicznik vMax km/h na fizyczny limit silnika
+                    const maxSpeedLimitEngine = config.maxSpeedKmh / 220; 
                     const gearRatio = currentGear / config.maxGears;
                     const maxSpeedOnCurrentGear = maxSpeedLimitEngine * gearRatio;
                     
-                    // --- REAKCJA NA GAZ / HAMULEC ---
+                    // Fizyka przyspieszania / hamowania
                     if (keys.forward || mobileGas) {
-                        // Przyspieszanie zależy od obrotów silnika (słabnie przy odcince)
                         let rpmFactor = (7800 - currentRpm) / 7800;
                         if(rpmFactor < 0.1) rpmFactor = 0.1;
                         
@@ -1034,39 +1026,35 @@
                         if (currentSpeed > maxSpeedOnCurrentGear) currentSpeed = maxSpeedOnCurrentGear;
                     } else if (keys.backward || mobileBrake) {
                         currentSpeed -= 0.006;
-                        if (currentSpeed < -0.3) currentSpeed = -0.3; // Limit wstecznego
+                        if (currentSpeed < -0.3) currentSpeed = -0.3; 
                     } else {
-                        // Naturalne hamowanie silnikiem / tarcie toczenia
                         if (currentSpeed > 0) currentSpeed = Math.max(0, currentSpeed - 0.002);
                         if (currentSpeed < 0) currentSpeed = Math.min(0, currentSpeed + 0.002);
                     }
                     
-                    // --- PRZELICZANIE AKTUALNEGO RPM ---
+                    // Obliczanie RPM i prędkości na liczniku
                     let speedKmh = Math.abs(Math.round(currentSpeed * 220));
                     
                     if (Math.abs(currentSpeed) <= 0.005) {
-                        currentRpm = 1000; // Wolne obroty na postoju
+                        currentRpm = 1000; 
                     } else {
-                        // Obroty zależne od prędkości na danym biegu
                         let targetRpm = 1000 + (speedKmh / (config.maxSpeedKmh * gearRatio)) * 6500;
                         currentRpm = THREE.MathUtils.lerp(currentRpm, targetRpm, 0.1);
-                        if (currentRpm > 7800) currentRpm = 7800; // Odcinka!
+                        if (currentRpm > 7800) currentRpm = 7800; 
                     }
                     
-                    // --- AUTOMATYCZNA SKRZYNIA BIEGÓW ---
+                    // Automat zmienia biegi przy 5000 RPM
                     if (!isManualTransmission && Math.abs(currentSpeed) > 0.05) {
-                        // Zmiana w górę przy zadanych 5000 RPM
                         if (currentRpm >= 5000 && currentGear < config.maxGears) {
                             currentGear++;
                             triggerPopup(`Bieg automatyczny: ${currentGear}`);
                         }
-                        // Redukcja biegu w dół przy spadku obrotów
                         if (currentRpm < 2000 && currentGear > 1) {
                             currentGear--;
                         }
                     }
                     
-                    // --- SKRĘCANIE ---
+                    // Skręcanie
                     if (Math.abs(currentSpeed) > 0.02) {
                         let directionMultiplier = currentSpeed > 0 ? 1 : -1;
                         if (keys.left) car.rotation.y += turnSpeed * directionMultiplier;
@@ -1076,18 +1064,17 @@
                         }
                     }
                     
-                    // --- RUCH POJAZDU ---
+                    // Aktualizacja pozycji modelu
                     car.position.x += Math.sin(car.rotation.y) * currentSpeed;
                     car.position.z += Math.cos(car.rotation.y) * currentSpeed;
                     
-                    // --- OŚWIEŻENIE UI LICZNIKA ---
+                    // Aktualizacja UI deski rozdzielczej
                     if (speedDisplay) speedDisplay.textContent = speedKmh;
                     if (rpmDisplay) rpmDisplay.textContent = Math.round(currentRpm);
                     if (gearDisplay) gearDisplay.textContent = currentSpeed < -0.01 ? "R" : currentGear;
                     
-                    // --- OBSŁUGA KAMERY (TPP / FPP) ---
+                    // OBSŁUGA KAMER (C)
                     if (cameraViewMode === 'TPP') {
-                        // Kamera zewnętrzna
                         const camOffsetZ = 12;
                         const camOffsetY = 4.0;
                         camera.position.x = car.position.x - Math.sin(car.rotation.y) * camOffsetZ;
@@ -1099,8 +1086,6 @@
                             car.position.z + Math.cos(car.rotation.y) * 2
                         );
                     } else {
-                        // Kamera wewnętrzna (FPP - ze środka pojazdu)
-                        // Obliczamy przesunięcie punktu oczu kierowcy w oparciu o rotację auta
                         const forwardX = Math.sin(car.rotation.y);
                         const forwardZ = Math.cos(car.rotation.y);
                         const rightX = Math.sin(car.rotation.y - Math.PI / 2);
@@ -1110,7 +1095,6 @@
                         camera.position.y = car.position.y + config.fppCamY;
                         camera.position.z = car.position.z + (rightZ * config.fppCamX) + (forwardZ * config.fppCamZ);
                         
-                        // Kamera FPP patrzy prosto na drogę przed maską
                         camera.lookAt(
                             camera.position.x + forwardX * 10,
                             camera.position.y - 0.1,
@@ -1125,10 +1109,8 @@
                         rot: { x: car.rotation.x, y: car.rotation.y, z: car.rotation.z }
                     });
                 }
-                
                 renderer.render(scene, camera);
             }
-            
             animate();
         }
         
