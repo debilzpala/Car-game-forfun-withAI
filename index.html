@@ -2,92 +2,96 @@
 <html lang="pl">
 <head>
     <meta charset="UTF-8">
-    <title>Race Master 3D - Full Pro</title>
+    <title>RACE MASTER 3D - PRO ENGINE</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #000; font-family: sans-serif; }
-        #menu { position: absolute; width: 100%; height: 100%; background: #000; color: white; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 10; }
-        #ui { position: absolute; top: 20px; left: 20px; color: white; pointer-events: none; font-size: 20px; display: none; }
+        body { margin: 0; background: #000; color: #fff; font-family: sans-serif; overflow: hidden; }
+        #menu { position: absolute; top:0; left:0; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; background: #000; z-index: 99; }
+        #hud { position: absolute; bottom: 20px; left: 20px; display: none; background: rgba(0,0,0,0.6); padding: 15px; pointer-events: none; }
     </style>
-    <script type="importmap">
-        { "imports": {
-            "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-            "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
-        }}
-    </script>
 </head>
 <body>
-    <div id="menu">
-        <h1>RACE MASTER 3D</h1>
-        <button onclick="startGame('bmw_m4.glb')">START BMW</button>
-        <button onclick="startGame('porsche.glb')">START PORSCHE</button>
-        <p>V - Kamera | SHIFT - Bieg wyżej | CTRL - Bieg niżej</p>
-    </div>
-    <div id="ui">
-        <div id="speed">0 km/h</div>
-        <div id="gear">Bieg: 1 (Automat)</div>
-    </div>
 
-    <script type="module">
-        import * as THREE from 'three';
-        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-        import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+<div id="menu">
+    <h1>RACE MASTER 3D</h1>
+    <button onclick="Game.start('bmw_m4.glb')">START BMW</button>
+    <button onclick="Game.start('porsche.glb')">START PORSCHE</button>
+    <p>V: Kamera | Shift: Bieg+ | Ctrl: Bieg- | WASD: Jazda</p>
+</div>
 
-        let scene, camera, renderer, car, gear = 1, viewMode = 0, speed = 0, isAuto = true;
-        const keys = { w: false, s: false, a: false, d: false };
+<div id="hud">
+    <div id="speed">0 km/h</div>
+    <div id="gear">Bieg: 1 (Auto)</div>
+</div>
 
-        window.startGame = (model) => {
+<script type="importmap">
+    { "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+    }}
+</script>
+
+<script type="module">
+    import * as THREE from 'three';
+    import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+    import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+
+    window.Game = {
+        scene: new THREE.Scene(),
+        camera: new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 20000),
+        renderer: new THREE.WebGLRenderer({ antialias: true }),
+        car: null,
+        speed: 0, gear: 1, viewMode: 0,
+        keys: { w:false, s:false, a:false, d:false },
+
+        start(model) {
             document.getElementById('menu').style.display = 'none';
-            document.getElementById('ui').style.display = 'block';
+            document.getElementById('hud').style.display = 'block';
             
-            scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x87CEEB);
-            camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 10000);
-            renderer = new THREE.WebGLRenderer({ antialias: true });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            document.body.appendChild(renderer.domElement);
-            scene.add(new THREE.AmbientLight(0xffffff, 1.2));
+            this.renderer.setSize(window.innerWidth, window.innerHeight);
+            document.body.appendChild(this.renderer.domElement);
+            this.scene.background = new THREE.Color(0x222222);
+            this.scene.add(new THREE.AmbientLight(0xffffff, 1.5));
 
-            // NAPRAWA DRACO
             const draco = new DRACOLoader().setDecoderPath('https://www.gstatic.com/draco/v1/decoders/');
             const loader = new GLTFLoader().setDRACOLoader(draco);
 
-            loader.load('./mapa1.glb', (gltf) => { gltf.scene.scale.set(5, 5, 5); scene.add(gltf.scene); });
-            loader.load('./' + model, (gltf) => { car = gltf.scene; scene.add(car); });
+            loader.load('./mapa1.glb', (gltf) => { gltf.scene.scale.set(10,10,10); this.scene.add(gltf.scene); });
+            loader.load('./' + model, (gltf) => { this.car = gltf.scene; this.scene.add(this.car); });
 
             window.onkeydown = (e) => {
-                if(keys.hasOwnProperty(e.key.toLowerCase())) keys[e.key.toLowerCase()] = true;
-                if(e.key === 'v') viewMode = (viewMode + 1) % 2;
-                if(e.key === 'Shift') { isAuto = false; gear = Math.min(gear + 1, 6); }
-                if(e.key === 'Control') { isAuto = false; gear = Math.max(gear - 1, 1); }
+                if(this.keys.hasOwnProperty(e.key.toLowerCase())) this.keys[e.key.toLowerCase()] = true;
+                if(e.key === 'v') this.viewMode = (this.viewMode + 1) % 2;
+                if(e.key === 'Shift') this.gear = Math.min(this.gear + 1, 6);
+                if(e.key === 'Control') this.gear = Math.max(this.gear - 1, 1);
             };
-            window.onkeyup = (e) => { if(keys.hasOwnProperty(e.key.toLowerCase())) keys[e.key.toLowerCase()] = false; };
+            window.onkeyup = (e) => { if(this.keys.hasOwnProperty(e.key.toLowerCase())) this.keys[e.key.toLowerCase()] = false; };
             
-            animate();
-        };
+            this.animate();
+        },
 
-        function animate() {
-            requestAnimationFrame(animate);
-            if(car) {
-                if(keys.w) speed += (0.001 * gear);
-                else if(keys.s) speed -= 0.002;
-                else speed *= 0.98;
-                if(keys.a) car.rotation.y += 0.04;
-                if(keys.d) car.rotation.y -= 0.04;
-                
-                car.position.x += Math.sin(car.rotation.y) * speed;
-                car.position.z += Math.cos(car.rotation.y) * speed;
+        animate() {
+            requestAnimationFrame(() => this.animate());
+            if(this.car) {
+                if(this.keys.w) this.speed += 0.002 * this.gear;
+                else if(this.keys.s) this.speed -= 0.002;
+                else this.speed *= 0.98;
+                if(this.keys.a) this.car.rotation.y += 0.04;
+                if(this.keys.d) this.car.rotation.y -= 0.04;
 
-                // Kamera
-                const offset = viewMode === 0 ? new THREE.Vector3(0, 0.6, 0.5) : new THREE.Vector3(0, 3, 8);
-                offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), car.rotation.y);
-                camera.position.lerp(car.position.clone().add(offset), 0.1);
-                camera.lookAt(car.position.clone().add(new THREE.Vector3(0, 0, 10).applyAxisAngle(new THREE.Vector3(0,1,0), car.rotation.y)));
-                
-                document.getElementById('speed').innerText = "Prędkość: " + Math.round(Math.abs(speed)*2000) + " km/h";
-                document.getElementById('gear').innerText = "Bieg: " + gear + (isAuto ? " (Auto)" : " (Manual)");
+                this.car.position.x += Math.sin(this.car.rotation.y) * this.speed;
+                this.car.position.z += Math.cos(this.car.rotation.y) * this.speed;
+
+                const offset = this.viewMode === 0 ? new THREE.Vector3(0, 0.7, 0.4) : new THREE.Vector3(0, 3, 10);
+                offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), this.car.rotation.y);
+                this.camera.position.lerp(this.car.position.clone().add(offset), 0.1);
+                this.camera.lookAt(this.car.position);
+
+                document.getElementById('speed').innerText = Math.round(Math.abs(this.speed)*2000) + " km/h";
+                document.getElementById('gear').innerText = "Bieg: " + this.gear;
             }
-            renderer.render(scene, camera);
+            this.renderer.render(this.scene, this.camera);
         }
-    </script>
+    };
+</script>
 </body>
 </html>
