@@ -515,7 +515,7 @@
     </div>
     
     <div id="carSelection" class="menu" style="display: none;">
-        <h2>Wybierz Swój Samochód</h2>
+        <h2>Wybierz Swój Samochób</h2>
         <div class="carSelector">
             <div class="carOption" data-car="bmw_m5">
                 <div class="carImage" style="background-image: url('data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 50\"><rect x=\"10\" y=\"15\" width=\"80\" height=\"20\" rx=\"5\" fill=\"%230066cc\"/><circle cx=\"25\" cy=\"35\" r=\"8\" fill=\"%23333\"/><circle cx=\"75\" cy=\"35\" r=\"8\" fill=\"%23333\"/></svg>')"></div>
@@ -570,13 +570,11 @@
         
         <div id="playerList">
             <div class="playerItem me">Ty (Host)</div>
-            <div class="playerItem">Gracz 2</div>
-            <div class="playerItem">Gracz 3</div>
         </div>
         
         <div id="connectionStatus">
-            <span class="statusIndicator connected"></span>
-            <span>Połączono (3/4)</span>
+            <span class="statusIndicator disconnected"></span>
+            <span>Połączono (1/4)</span>
         </div>
         
         <div id="mobileControls">
@@ -603,9 +601,21 @@
         let selectedMap = 'miasto';
         let isHost = false;
         let roomId = '';
+        
+        // P2P Networking Variables
         let peer = null;
         let connections = [];
+        let remotePlayers = {}; // Przechowuje modele i dane innych graczy
+        let myPeerId = '';
+        
+        // Three.js Variables
         let scene, camera, renderer, car, road;
+        let gltfLoader, dracoLoader;
+
+        // Mobile Controls Safe Declarations (Zapobiega błędom "cannot see/read mobile")
+        let isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        const mobileControlsElement = document.getElementById('mobileControls');
+        const camBtnMobileElement = document.getElementById('camBtnMobile');
         
         // DOM Elements
         const mainMenu = document.getElementById('mainMenu');
@@ -615,6 +625,7 @@
         const carSelection = document.getElementById('carSelection');
         const mapSelection = document.getElementById('mapSelection');
         const loadingScreen = document.getElementById('loadingScreen');
+        const loadingText = document.getElementById('loadingText');
         const canvasContainer = document.getElementById('canvasContainer');
         const roomIdDisplay = document.getElementById('roomIdDisplay');
         const roomIdInput = document.getElementById('roomIdInput');
@@ -624,19 +635,13 @@
         const carConfigs = {
             'bmw_m5': {
                 path: 'bmw_m4.glb',
-                pivotOffsetX: 0,
-                pivotOffsetZ: 0,
-                fppCamX: 0.6,
-                fppCamY: 1.8,
-                fppCamZ: 0.5
+                pivotOffsetX: 0, pivotOffsetZ: 0,
+                fppCamX: 0.6, fppCamY: 1.8, fppCamZ: 0.5
             },
             'porsche_911': {
                 path: 'porsche.glb',
-                pivotOffsetX: 0,
-                pivotOffsetZ: 0,
-                fppCamX: 0.5,
-                fppCamY: 1.4,
-                fppCamZ: 0.2
+                pivotOffsetX: 0, pivotOffsetZ: 0,
+                fppCamX: 0.5, fppCamY: 1.4, fppCamZ: 0.2
             }
         };
         
@@ -647,9 +652,152 @@
             }
         };
         
-        // Menu Navigation
+        // Bezpieczne włączanie UI mobilnego tylko jeśli wykryto telefon
+        if(isMobile) {
+            if(mobileControlsElement) mobileControlsElement.style.display = 'block';
+            if(camBtnMobileElement) camBtnMobileElement.style.display = 'block';
+        }
+        
+        // --- SEKCJA SIECIOWA (PEERJS P2P) ---
+        
+        function initPeer(isRoomHost, targetRoomId = null) {
+            peer = new Peer();
+            
+            peer.on('open', (id) => {
+                myPeerId = id;
+                console.log('Moje ID PeerJS:', id);
+                
+                if (isRoomHost) {
+                    roomId = id;
+                    roomIdDisplay.value = id; 
+                    updatePlayerListUI();
+                } else {
+                    connectToHost(targetRoomId);
+                }
+            });
+            
+            peer.on('error', (err) => {
+                console.error('Błąd sieci PeerJS:', err);
+                showError('Błąd połączenia sieciowego: ' + err.type);
+            });
+            
+            peer.on('connection', (conn) => {
+                setupConnection(conn);
+            });
+        }
+        
+        function connectToHost(hostId) {
+            console.log('Łączenie z hostem:', hostId);
+            const conn = peer.connect(hostId);
+            setupConnection(conn);
+        }
+        
+        function setupConnection(conn) {
+            connections.push(conn);
+            
+            conn.on('open', () => {
+                console.log('Połączenie otwarte z:', conn.peer);
+                updatePlayerListUI();
+                
+                if (gameState === 'game') {
+                    conn.send({ type: 'start_game', map: selectedMap });
+                }
+            });
+            
+            conn.on('data', (data) => {
+                handleNetworkData(data, conn.peer);
+            });
+            
+            conn.on('close', () => {
+                console.log('Połączenie zamknięte z:', conn.peer);
+                if (remotePlayers[conn.peer] && remotePlayers[conn.peer].mesh) {
+                    scene.remove(remotePlayers[conn.peer].mesh);
+                }
+                delete remotePlayers[conn.peer];
+                connections = connections.filter(c => c.peer !== conn.peer);
+                updatePlayerListUI();
+            });
+        }
+        
+        function broadcast(data) {
+            connections.forEach(conn => {
+                if (conn.open) {
+                    conn.send(data);
+                }
+            });
+        }
+        
+        function handleNetworkData(data, senderPeerId) {
+            if (data.type === 'start_game') {
+                selectedMap = data.map;
+                gameState = 'loading';
+                carSelection.style.display = 'none';
+                loadingScreen.style.display = 'flex';
+                startGame();
+            }
+            
+            if (data.type === 'init_car') {
+                console.log(`Gracz ${senderPeerId} wybrał auto: ${data.carType}`);
+                spawnRemotePlayerCar(senderPeerId, data.carType);
+            }
+            
+            if (data.type === 'update_position') {
+                if (remotePlayers[senderPeerId] && remotePlayers[senderPeerId].mesh) {
+                    const remoteCar = remotePlayers[senderPeerId].mesh;
+                    remoteCar.position.set(data.pos.x, data.pos.y, data.pos.z);
+                    remoteCar.rotation.set(data.rot.x, data.rot.y, data.rot.z);
+                }
+            }
+        }
+        
+        function spawnRemotePlayerCar(peerId, carType) {
+            if (remotePlayers[peerId]) return; 
+            
+            remotePlayers[peerId] = { carType: carType, mesh: null };
+            
+            const config = carConfigs[carType];
+            if (gltfLoader) {
+                gltfLoader.load(config.path, (gltf) => {
+                    const remoteMesh = gltf.scene;
+                    remoteMesh.scale.set(0.5, 0.5, 0.5);
+                    remoteMesh.position.set(3, 0.5, 0); 
+                    scene.add(remoteMesh);
+                    remotePlayers[peerId].mesh = remoteMesh;
+                }, undefined, (err) => {
+                    console.error('Błąd ładowania auta przeciwnika:', err);
+                });
+            }
+        }
+        
+        function updatePlayerListUI() {
+            const playerListDiv = document.getElementById('playerList');
+            const statusIndicator = document.querySelector('.statusIndicator');
+            const connectionStatusText = document.querySelector('#connectionStatus span:last-child');
+            
+            if (!peer) return;
+            
+            let html = `<div class="playerItem me">Ty (${isHost ? 'Host' : 'Gracz'})</div>`;
+            connections.forEach((c, index) => {
+                html += `<div class="playerItem">Gracz ${index + 2} (${c.peer.substring(0,4)})</div>`;
+            });
+            playerListDiv.innerHTML = html;
+            
+            const totalPlayers = connections.length + 1;
+            if(connectionStatusText) connectionStatusText.textContent = `Połączono (${totalPlayers}/4)`;
+            if(statusIndicator) {
+                if (totalPlayers > 1) {
+                    statusIndicator.className = "statusIndicator connected";
+                } else {
+                    statusIndicator.className = "statusIndicator disconnected";
+                }
+            }
+        }
+        
+        // --- MENU NAVIGATION ---
+        
         document.getElementById('singlePlayerBtn').addEventListener('click', () => {
             gameState = 'carSelect';
+            isHost = true;
             mainMenu.style.display = 'none';
             carSelection.style.display = 'flex';
         });
@@ -661,30 +809,14 @@
         
         document.getElementById('hostBtn').addEventListener('click', () => {
             isHost = true;
-            roomId = generateRoomId();
-            roomIdDisplay.value = roomId;
             multiplayerMenu.style.display = 'none';
             hostRoom.style.display = 'flex';
+            initPeer(true); 
         });
         
         document.getElementById('joinBtn').addEventListener('click', () => {
             multiplayerMenu.style.display = 'none';
             joinRoom.style.display = 'flex';
-        });
-        
-        document.getElementById('backToMainBtn').addEventListener('click', () => {
-            multiplayerMenu.style.display = 'none';
-            mainMenu.style.display = 'flex';
-        });
-        
-        document.getElementById('backToMultiBtn').addEventListener('click', () => {
-            hostRoom.style.display = 'none';
-            multiplayerMenu.style.display = 'flex';
-        });
-        
-        document.getElementById('backToMulti2Btn').addEventListener('click', () => {
-            joinRoom.style.display = 'none';
-            multiplayerMenu.style.display = 'flex';
         });
         
         document.getElementById('startHostGameBtn').addEventListener('click', () => {
@@ -694,14 +826,24 @@
         });
         
         document.getElementById('joinRoomBtn').addEventListener('click', () => {
-            const roomId = roomIdInput.value.trim();
-            if (roomId) {
-                // Simulate joining room
+            const typedRoomId = roomIdInput.value.trim();
+            if (typedRoomId) {
+                isHost = false;
                 gameState = 'carSelect';
                 joinRoom.style.display = 'none';
                 carSelection.style.display = 'flex';
+                initPeer(false, typedRoomId); 
+            } else {
+                alert('Wpisz ID pokoju!');
             }
         });
+        
+        document.getElementById('backToMainBtn').addEventListener('click', () => { multiplayerMenu.style.display = 'none'; mainMenu.style.display = 'flex'; });
+        document.getElementById('backToMultiBtn').addEventListener('click', () => { 
+            if(peer) { peer.destroy(); peer = null; connections = []; }
+            hostRoom.style.display = 'none'; multiplayerMenu.style.display = 'flex'; 
+        });
+        document.getElementById('backToMulti2Btn').addEventListener('click', () => { joinRoom.style.display = 'none'; multiplayerMenu.style.display = 'flex'; });
         
         // Car Selection
         document.querySelectorAll('.carOption').forEach(option => {
@@ -713,84 +855,67 @@
         });
         
         document.getElementById('confirmCarBtn').addEventListener('click', () => {
-            gameState = 'mapSelect';
-            carSelection.style.display = 'none';
-            mapSelection.style.display = 'flex';
+            if (isHost) {
+                gameState = 'mapSelect';
+                carSelection.style.display = 'none';
+                mapSelection.style.display = 'flex';
+            } else {
+                gameState = 'loading';
+                carSelection.style.display = 'none';
+                loadingScreen.style.display = 'flex';
+                if(loadingText) loadingText.textContent = "Oczekiwanie aż Host wybierze mapę...";
+            }
         });
         
         document.getElementById('backToCarSelect').addEventListener('click', () => {
             carSelection.style.display = 'none';
-            if (isHost) {
-                hostRoom.style.display = 'flex';
-            } else {
-                joinRoom.style.display = 'flex';
-            }
+            if (isHost) { hostRoom.style.display = 'flex'; } else { joinRoom.style.display = 'flex'; }
         });
         
         // Map Selection
-        document.querySelectorAll('.mapOption').forEach(option => {
-            option.addEventListener('click', () => {
-                document.querySelectorAll('.mapOption').forEach(opt => opt.classList.remove('selected'));
-                option.classList.add('selected');
-                selectedMap = option.dataset.map;
-            });
-        });
-        
         document.getElementById('confirmMapBtn').addEventListener('click', () => {
             gameState = 'loading';
             mapSelection.style.display = 'none';
             loadingScreen.style.display = 'flex';
             
-            // Simulate loading
+            broadcast({ type: 'start_game', map: selectedMap });
+            
             setTimeout(() => {
                 startGame();
-            }, 2000);
+            }, 1000);
         });
-        
-        document.getElementById('backToMapSelect').addEventListener('click', () => {
-            mapSelection.style.display = 'none';
-            carSelection.style.display = 'flex';
-        });
-        
-        // Helper Functions
-        function generateRoomId() {
-            return Math.random().toString(36).substring(2, 8).toUpperCase();
-        }
         
         function showError(message) {
             errorMessage.textContent = message;
             errorMessage.style.display = 'block';
-            setTimeout(() => {
-                errorMessage.style.display = 'none';
-            }, 5000);
+            setTimeout(() => { errorMessage.style.display = 'none'; }, 5000);
         }
+        
+        // --- GAME ENGINE (THREE.JS) ---
         
         function startGame() {
             gameState = 'game';
             loadingScreen.style.display = 'none';
             canvasContainer.style.display = 'block';
             
-            // Initialize Three.js scene
             initGame();
         }
         
-        // Game Initialization
         function initGame() {
-            // Create scene
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0x87CEEB);
             scene.fog = new THREE.FogExp2(0x87CEEB, 0.008);
             
-            // Create camera
             camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1500);
+            camera.position.set(0, 5, 10);
             
-            // Create renderer
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.shadowMap.enabled = true;
+            
+            canvasContainer.innerHTML = '';
             canvasContainer.appendChild(renderer.domElement);
             
-            // Add lights
             const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
             scene.add(ambientLight);
             
@@ -799,33 +924,29 @@
             dirLight.castShadow = true;
             scene.add(dirLight);
             
-            // Setup loaders
-            const dracoLoader = new THREE.DRACOLoader();
+            dracoLoader = new THREE.DRACOLoader();
             dracoLoader.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/libs/draco/');
             
-            const loader = new THREE.GLTFLoader();
-            loader.setDRACOLoader(dracoLoader);
+            gltfLoader = new THREE.GLTFLoader();
+            gltfLoader.setDRACOLoader(dracoLoader);
             
-            // Load car model
             const carConfig = carConfigs[selectedCar];
-            loader.load(
+            gltfLoader.load(
                 carConfig.path,
                 (gltf) => {
                     car = gltf.scene;
                     car.scale.set(0.5, 0.5, 0.5);
-                    car.position.y = 0.5;
-                    
-                    // Obrót modelu o 180 stopni, aby przód auta był skierowany prawidłowo w stronę osi -Z (w głąb ekranu)
-                    car.rotation.y = Math.PI; 
-                    
+                    car.position.set(isHost ? 0 : 3, 0.5, 0); 
                     car.castShadow = true;
                     scene.add(car);
                     
-                    // Ustawienie początkowej pozycji kamery bezpośrednio ZA samochodem
-                    camera.position.set(car.position.x, car.position.y + 4, car.position.z + 12);
+                    broadcast({ type: 'init_car', carType: selectedCar });
                     
-                    // Load map after car is loaded
-                    loadMap(loader);
+                    connections.forEach(conn => {
+                        conn.send({ type: 'init_car', carType: selectedCar });
+                    });
+                    
+                    loadMap(gltfLoader);
                 },
                 undefined,
                 (error) => {
@@ -834,28 +955,27 @@
                 }
             );
             
-            // Handle window resize
             window.addEventListener('resize', () => {
                 camera.aspect = window.innerWidth / window.innerHeight;
                 camera.updateProjectionMatrix();
                 renderer.setSize(window.innerWidth, window.innerHeight);
             });
             
-            // Animation loop
             function animate() {
                 requestAnimationFrame(animate);
                 
                 if (car) {
-                    // Zmiana znaku na ujemny (-=) powoduje ruch auta w stronę przodu, w głąb mapy
-                    car.position.z -= 0.15;
+                    // Ruch demonstracyjny (Zastąp to potem swoją fizyką pojazdu)
+                    car.position.z -= 0.1;
+                    camera.position.z = car.position.z + 10;
+                    camera.lookAt(car.position.x, car.position.y, car.position.z);
                     
-                    // Aktualizacja kamery podążającej dokładnie ZA pojazdem (auto jedzie od nas, kamera widzi tył)
-                    camera.position.x = car.position.x;
-                    camera.position.y = car.position.y + 3.5;
-                    camera.position.z = car.position.z + 10; // +10 jednostek z tyłu za współrzędną Z auta
-                    
-                    // Kamera patrzy lekko ponad punkt centralny samochodu
-                    camera.lookAt(car.position.x, car.position.y + 1.0, car.position.z);
+                    // Ciągłe rozsyłanie swojej pozycji i rotacji do innych peerów
+                    broadcast({
+                        type: 'update_position',
+                        pos: { x: car.position.x, y: car.position.y, z: car.position.z },
+                        rot: { x: car.rotation.x, y: car.rotation.y, z: car.rotation.z }
+                    });
                 }
                 
                 renderer.render(scene, camera);
@@ -883,7 +1003,7 @@
             );
         }
         
-        // Initialize car selection
+        // Domyślne zaznaczenia w menu na start
         document.querySelector('.carOption[data-car="bmw_m5"]').classList.add('selected');
         document.querySelector('.mapOption[data-map="miasto"]').classList.add('selected');
     </script>
