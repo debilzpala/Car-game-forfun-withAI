@@ -515,7 +515,7 @@
     </div>
     
     <div id="carSelection" class="menu" style="display: none;">
-        <h2>Wybierz Swój Samochób</h2>
+        <h2>Wybierz Swój Samochód</h2>
         <div class="carSelector">
             <div class="carOption" data-car="bmw_m5">
                 <div class="carImage" style="background-image: url('data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 50\"><rect x=\"10\" y=\"15\" width=\"80\" height=\"20\" rx=\"5\" fill=\"%230066cc\"/><circle cx=\"25\" cy=\"35\" r=\"8\" fill=\"%23333\"/><circle cx=\"75\" cy=\"35\" r=\"8\" fill=\"%23333\"/></svg>')"></div>
@@ -612,7 +612,7 @@
         let scene, camera, renderer, car, road;
         let gltfLoader, dracoLoader;
 
-        // Mobile Controls Safe Declarations (Zapobiega błędom "cannot see/read mobile")
+        // Mobile Controls Safe Declarations
         let isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
         const mobileControlsElement = document.getElementById('mobileControls');
         const camBtnMobileElement = document.getElementById('camBtnMobile');
@@ -648,11 +648,10 @@
         // Map configurations
         const mapConfigs = {
             'miasto': {
-                path: 'mapa1.glb'
+                path: 'C:/Users/Hubert/Downloads/mapy/mapa1.glb'
             }
         };
         
-        // Bezpieczne włączanie UI mobilnego tylko jeśli wykryto telefon
         if(isMobile) {
             if(mobileControlsElement) mobileControlsElement.style.display = 'block';
             if(camBtnMobileElement) camBtnMobileElement.style.display = 'block';
@@ -761,6 +760,8 @@
                     const remoteMesh = gltf.scene;
                     remoteMesh.scale.set(0.5, 0.5, 0.5);
                     remoteMesh.position.set(3, 0.5, 0); 
+                    // Obracamy auto przeciwnika tak samo jak nasze o 180 stopni na osi Y
+                    remoteMesh.rotation.y = Math.PI; 
                     scene.add(remoteMesh);
                     remotePlayers[peerId].mesh = remoteMesh;
                 }, undefined, (err) => {
@@ -907,7 +908,6 @@
             scene.fog = new THREE.FogExp2(0x87CEEB, 0.008);
             
             camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1500);
-            camera.position.set(0, 5, 10);
             
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
@@ -937,6 +937,11 @@
                     car = gltf.scene;
                     car.scale.set(0.5, 0.5, 0.5);
                     car.position.set(isHost ? 0 : 3, 0.5, 0); 
+                    
+                    // NAPRAWA: Obracamy model o 180 stopni na osi Y (Math.PI radianów)
+                    // Dzięki temu auto pojedzie przodem w stronę globalnego -Z
+                    car.rotation.y = Math.PI;
+                    
                     car.castShadow = true;
                     scene.add(car);
                     
@@ -965,10 +970,16 @@
                 requestAnimationFrame(animate);
                 
                 if (car) {
-                    // Ruch demonstracyjny (Zastąp to potem swoją fizyką pojazdu)
+                    // Ruch demonstracyjny do przodu (w głąb osi -Z)
                     car.position.z -= 0.1;
-                    camera.position.z = car.position.z + 10;
-                    camera.lookAt(car.position.x, car.position.y, car.position.z);
+                    
+                    // NAPRAWA KAMERY TPP: 
+                    // Stawiamy kamerę ZA samochodem (pozycja Z + 10 względem auta)
+                    // oraz lekko nad nim (Y = 4), żeby widzieć drogę z tyłu.
+                    camera.position.set(car.position.x, car.position.y + 4, car.position.z + 10);
+                    
+                    // Kamera patrzy lekko przed samochód (np. 5 jednostek do przodu na osi -Z)
+                    camera.lookAt(car.position.x, car.position.y, car.position.z - 5);
                     
                     // Ciągłe rozsyłanie swojej pozycji i rotacji do innych peerów
                     broadcast({
