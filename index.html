@@ -3,33 +3,55 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Gra 3D - Racing Master P2P</title>
+    <title>Race Master 3D - Procedural Edition</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: sans-serif; }
-        body { overflow: hidden; background: #111; height: 100vh; display: flex; justify-content: center; align-items: center; color: white; }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { overflow: hidden; background: #0a0a16; height: 100vh; display: flex; justify-content: center; align-items: center; color: white; }
         #gameContainer { position: relative; width: 100%; height: 100%; }
         #canvasContainer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: none; }
         canvas { display: block; }
-        .menu { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; background: rgba(0, 0, 0, 0.9); z-index: 100; text-align: center; }
-        .menu h1 { font-size: 3rem; margin-bottom: 20px; color: #ff8a00; text-transform: uppercase; }
-        .menu button { background: linear-gradient(45deg, #ff8a00, #e52e71); border: none; padding: 15px 40px; margin: 10px; font-size: 1.2rem; color: white; border-radius: 25px; cursor: pointer; width: 280px; font-weight: bold; }
-        .menu input { padding: 12px; width: 280px; margin: 10px; font-size: 1.1rem; border: 2px solid #ff8a00; border-radius: 25px; background: #000; color: #fff; text-align: center; }
-        .backButton { background: #333 !important; }
-        .carSelector { display: flex; gap: 20px; margin: 20px; }
-        .carOption { padding: 20px; background: #222; border-radius: 10px; cursor: pointer; border: 2px solid transparent; width: 180px; }
-        .carOption.selected { border-color: #e52e71; background: #331122; }
-        #loadingScreen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #000; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 200; display: none; }
-        .loader { width: 60px; height: 60px; border: 6px solid #333; border-top: 6px solid #ff8a00; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 20px; }
+        
+        .menu { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; background: rgba(10, 10, 22, 0.95); z-index: 100; text-align: center; padding: 20px; }
+        .menu h1 { font-size: 3.5rem; margin-bottom: 20px; background: linear-gradient(45deg, #ff8a00, #e52e71); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-transform: uppercase; letter-spacing: 2px; font-weight: 900; }
+        .menu h2 { font-size: 2rem; margin-bottom: 20px; color: #ff8a00; text-transform: uppercase; }
+        .menu p { color: #ccc; margin-bottom: 15px; font-size: 1.1rem; }
+        .menu button { background: linear-gradient(45deg, #ff8a00, #e52e71); border: none; padding: 15px 40px; margin: 10px; font-size: 1.2rem; color: white; border-radius: 30px; cursor: pointer; width: 300px; font-weight: bold; text-transform: uppercase; transition: transform 0.2s, box-shadow 0.2s; box-shadow: 0 4px 15px rgba(229, 46, 113, 0.4); }
+        .menu button:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(229, 46, 113, 0.6); }
+        .menu input { padding: 14px; width: 300px; margin: 10px; font-size: 1.1rem; border: 2px solid #ff8a00; border-radius: 30px; background: #05050f; color: #fff; text-align: center; outline: none; }
+        .backButton { background: #222 !important; box-shadow: none !important; border: 1px solid #444 !important; }
+        
+        .carSelector { display: flex; gap: 20px; margin: 25px; }
+        .carOption { padding: 25px; background: #131326; border-radius: 15px; cursor: pointer; border: 2px solid #222; width: 200px; transition: all 0.2s; }
+        .carOption:hover { border-color: #ff8a00; background: #1a1a36; }
+        .carOption.selected { border-color: #e52e71; background: #2d122d; box-shadow: 0 0 15px rgba(229, 46, 113, 0.3); }
+        .carOption div:first-child { font-size: 1.3rem; font-weight: bold; margin-bottom: 5px; }
+        .carOption div:last-child { font-size: 0.85rem; color: #888; }
+        
+        #loadingScreen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #0a0a16; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 200; display: none; }
+        .loader { width: 70px; height: 70px; border: 6px solid #131326; border-top: 6px solid #e52e71; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 20px; box-shadow: 0 0 15px rgba(229, 46, 113, 0.2); }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        #ui { position: absolute; top: 20px; left: 20px; color: white; font-size: 18px; font-weight: bold; background: rgba(0,0,0,0.6); padding: 15px; border-radius: 8px; z-index: 10; line-height: 1.5; }
-        #instrukcja { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.7); padding: 10px 20px; border-radius: 8px; text-align: center; font-size: 14px; z-index: 10; }
-        .highlight { color: #ff8a00; }
-        #playerList { position: absolute; top: 20px; right: 20px; background: rgba(0,0,0,0.7); padding: 15px; border-radius: 8px; z-index: 10; min-width: 150px; }
+        #loadingText { font-size: 1.3rem; color: #eee; letter-spacing: 1px; }
+        
+        #ui { position: absolute; top: 20px; left: 20px; color: white; font-size: 18px; font-weight: bold; background: rgba(10, 10, 25, 0.75); padding: 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); z-index: 10; line-height: 1.6; backdrop-filter: blur(5px); min-width: 180px; }
+        #instrukcja { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(10, 10, 25, 0.8); padding: 12px 25px; border-radius: 30px; text-align: center; font-size: 14px; z-index: 10; border: 1px solid rgba(255,255,255,0.1); pointer-events: none; letter-spacing: 0.5px; }
+        .highlight { color: #ff8a00; font-size: 20px; }
+        #playerList { position: absolute; top: 20px; right: 20px; background: rgba(10, 10, 25, 0.8); padding: 15px 20px; border-radius: 12px; z-index: 10; min-width: 180px; border: 1px solid rgba(255,255,255,0.1); }
+        #playerList div:first-child { font-weight: bold; margin-bottom: 8px; color: #ff8a00; border-bottom: 1px solid #333; padding-bottom: 5px; }
     </style>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.152.2/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.152.2/examples/jsm/"
+            }
+        }
+    </script>
 </head>
 <body>
     <div id="mainMenu" class="menu">
         <h1>Race Master 3D</h1>
+        <p>Proceduralny Świat & P2P Multiplayer</p>
         <button id="singlePlayerBtn">Graj Solo</button>
         <button id="multiplayerBtn">Graj z Przyjacielem</button>
     </div>
@@ -43,16 +65,16 @@
     
     <div id="hostRoom" class="menu" style="display: none;">
         <h2>Twój Pokój</h2>
-        <p>Wyślij ten kod koledze:</p>
+        <p>Udostępnij ten kod drugiemu graczowi:</p>
         <input type="text" id="roomIdDisplay" readonly>
-        <button id="startHostGameBtn">Wybór pojazdu</button>
+        <button id="startHostGameBtn">Wybór Pojazdu</button>
         <button class="backButton" id="backToMultiBtn">Powrót</button>
     </div>
     
     <div id="joinRoom" class="menu" style="display: none;">
         <h2>Dołącz do gry</h2>
         <input type="text" id="roomIdInput" placeholder="Wklej ID od Hosta">
-        <button id="joinRoomBtn">Połącz</button>
+        <button id="joinRoomBtn">Połącz i przejdź dalej</button>
         <button class="backButton" id="backToMulti2Btn">Powrót</button>
     </div>
     
@@ -60,20 +82,20 @@
         <h2>Wybierz Pojazd</h2>
         <div class="carSelector">
             <div class="carOption" data-car="bmw_m5">
-                <div style="font-weight:bold;">BMW M4</div>
-                <div style="font-size:12px; color:#aaa; margin-top:5px;">bmw_m4.glb</div>
+                <div>BMW M4</div>
+                <div>bmw_m4.glb</div>
             </div>
             <div class="carOption" data-car="porsche_911">
-                <div style="font-weight:bold;">Porsche</div>
-                <div style="font-size:12px; color:#aaa; margin-top:5px;">porsche.glb</div>
+                <div>Porsche 911</div>
+                <div>porsche.glb</div>
             </div>
         </div>
-        <button id="confirmCarBtn">Zatwierdź i Uruchom Świat</button>
+        <button id="confirmCarBtn">Uruchom Świat 3D</button>
     </div>
     
     <div id="loadingScreen">
         <div class="loader"></div>
-        <div id="loadingText">Generowanie terenu proceduralnego...</div>
+        <div id="loadingText">Inicjalizacja generatora terenu...</div>
     </div>
     
     <div id="gameContainer">
@@ -81,34 +103,44 @@
         <div id="ui">
             Kamera: <span id="camMode" class="highlight">TPP</span><br>
             Bieg: <span id="gear" class="highlight">1</span><br>
-            RPM: <span id="rpm">1000</span> / 7500<br>
-            Prędkość: <span id="speed">0</span> km/h
+            RPM: <span id="rpm">1000</span><br>
+            Prędkość: <span id="speed" class="highlight">0</span> km/h
         </div>
         <div id="instrukcja">Sterowanie: <b>WASD / Strzałki</b> | Zmiana kamery: <b>Klawisz C</b></div>
-        <div id="playerList"><div>Gracze:</div></div>
+        <div id="playerList"><div>Gracze w sesji:</div></div>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
     <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
-    <script>
+    
+    <script type="module">
+        import * as THREE from 'three';
+        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
         let gameState = 'menu', selectedCar = 'bmw_m5', isHost = false;
         let peer = null, connections = [], remotePlayers = {}, pendingRemotes = [];
         let scene, camera, renderer, car;
         let gltfLoader;
         
         let lastNetworkUpdate = 0;
-        const networkTickInterval = 40; // 25 ticków sieciowych na sekundę
+        const networkTickInterval = 45; // Stabilne 22 pakiety/sekundę
 
-        // Fizyka jazdy
+        // Fizyka i dynamika ruchu pojazdu
         let currentSpeed = 0;
-        const maxSpeed = 1.8, acceleration = 0.015, friction = 0.008, turnSpeed = 0.04;
+        const maxSpeed = 2.2, acceleration = 0.012, friction = 0.006, turnSpeed = 0.038;
         const keys = { forward: false, backward: false, left: false, right: false };
         let cameraViewMode = 'TPP';
 
-        const carConfigs = { 'bmw_m5': { path: 'bmw_m4.glb' }, 'porsche_911': { path: 'porsche.glb' } };
+        // Konfiguracje lokalnych plików
+        const carConfigs = { 
+            'bmw_m5': { path: 'bmw_m4.glb' }, 
+            'porsche_911': { path: 'porsche.glb' } 
+        };
 
-        // DOM
+        // Tablice do sprawdzania wysokości terenu i drogi w locie
+        let terrainGeomAttribute = null;
+        const trackPoints = [];
+
+        // DOM Elements
         const mainMenu = document.getElementById('mainMenu');
         const multiplayerMenu = document.getElementById('multiplayerMenu');
         const hostRoom = document.getElementById('hostRoom');
@@ -119,7 +151,7 @@
         const roomIdDisplay = document.getElementById('roomIdDisplay');
         const roomIdInput = document.getElementById('roomIdInput');
 
-        // Input handler
+        // Obsługa sterowania klawiaturą
         window.addEventListener('keydown', (e) => {
             if (gameState !== 'game') return;
             if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') keys.forward = true;
@@ -138,7 +170,7 @@
             if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.right = false;
         });
 
-        // Nawigacja menu
+        // Menu i nawigacja UI
         document.getElementById('singlePlayerBtn').addEventListener('click', () => { gameState = 'carSelect'; isHost = true; mainMenu.style.display = 'none'; carSelection.style.display = 'flex'; });
         document.getElementById('multiplayerBtn').addEventListener('click', () => { mainMenu.style.display = 'none'; multiplayerMenu.style.display = 'flex'; });
         document.getElementById('hostBtn').addEventListener('click', () => { isHost = true; multiplayerMenu.style.display = 'none'; hostRoom.style.display = 'flex'; initPeer(true); });
@@ -169,7 +201,7 @@
             }
         });
 
-        // PEERJS NETWORK
+        // Obsługa sieci PeerJS P2P
         function initPeer(hostMode, targetId = null) {
             peer = new Peer();
             peer.on('open', (id) => { if(hostMode) { roomIdDisplay.value = id; updateNetUI(); } else { const conn = peer.connect(targetId); handleConn(conn); } });
@@ -197,22 +229,43 @@
         function broadcast(msg) { connections.forEach(c => { if(c.open) c.send(msg); }); }
         function updateNetUI() {
             const list = document.getElementById('playerList');
-            list.innerHTML = `<div>Gracze:</div><div style="color:#ff8a00;">Ty (${isHost?'Host':'Klient'})</div>`;
+            list.innerHTML = `<div>Gracze w sesji:</div><div style="color:#ff8a00;">Ty (${isHost?'Host':'Klient'})</div>`;
             connections.forEach((c, i) => { list.innerHTML += `<div>Gracz ${i+2}</div>`; });
         }
 
-        // Awaryjny model pojazdu (gdyby lokalny .glb nie był podpięty)
-        function generateFallbackCar(colorHex) {
+        // Genialne, dynamiczne modele aut zastępczych 3D low-poly (odpalane w ułamku sekundy, gdy nie ma .glb)
+        function generateStylizedCar(colorHex) {
             const carGroup = new THREE.Group();
-            const body = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.6, 3.2), new THREE.MeshStandardMaterial({ color: colorHex, roughness: 0.2 }));
-            body.position.y = 0.4; carGroup.add(body);
-            const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.5, 1.6), new THREE.MeshStandardMaterial({ color: 0x222222 }));
-            cabin.position.set(0, 0.85, -0.2); carGroup.add(cabin);
-            const wheelGeo = new THREE.CylinderGeometry(0.35, 0.35, 0.3, 12);
-            const wheelMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
-            [[-0.85, 0.35, 1], [0.85, 0.35, 1], [-0.85, 0.35, -1], [0.85, 0.35, -1]].forEach(p => {
-                const w = new THREE.Mesh(wheelGeo, wheelMat); w.rotation.z = Math.PI / 2; w.position.set(p[0], p[1], p[2]); carGroup.add(w);
+            
+            // Karoseria dolna
+            const bodyMat = new THREE.MeshStandardMaterial({ color: colorHex, roughness: 0.1, metalness: 0.8 });
+            const body = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.5, 3.6), bodyMat);
+            body.position.y = 0.4;
+            carGroup.add(body);
+            
+            // Kabina/Szyby
+            const glassMat = new THREE.MeshStandardMaterial({ color: 0x111122, roughness: 0.0, metalness: 1.0 });
+            const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.5, 1.8), glassMat);
+            cabin.position.set(0, 0.85, -0.2);
+            carGroup.add(cabin);
+
+            // Spojler tył
+            const spoiler = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.1, 0.3), bodyMat);
+            spoiler.position.set(0, 0.8, 1.6);
+            carGroup.add(spoiler);
+            
+            // Koła
+            const wheelGeo = new THREE.CylinderGeometry(0.4, 0.4, 0.35, 16);
+            const wheelMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.7 });
+            const wheelPositions = [[-0.9, 0.4, 1.1], [0.9, 0.4, 1.1], [-0.9, 0.4, -1.1], [0.9, 0.4, -1.1]];
+            
+            wheelPositions.forEach(p => {
+                const w = new THREE.Mesh(wheelGeo, wheelMat);
+                w.rotation.z = Math.PI / 2;
+                w.position.set(p[0], p[1], p[2]);
+                carGroup.add(w);
             });
+            
             return carGroup;
         }
 
@@ -221,87 +274,123 @@
             gltfLoader.load(carConfigs[type].path, 
                 (gltf) => { const mesh = gltf.scene; mesh.scale.set(0.5,0.5,0.5); scene.add(mesh); remotePlayers[id] = mesh; },
                 undefined,
-                () => { const mesh = generateFallbackCar(0x00ff00); scene.add(mesh); remotePlayers[id] = mesh; }
+                () => { 
+                    console.log(`Nie znaleziono pliku ${carConfigs[type].path} dla gracza zewnętrznego. Generuję zielone auto testowe.`);
+                    const mesh = generateStylizedCar(0x00ff66); 
+                    scene.add(mesh); 
+                    remotePlayers[id] = mesh; 
+                }
             );
         }
 
-        // --- PROCEDURALNY GENERATOR ŚWIATA 3D ---
-        function generateProceduralWorld() {
-            // 1. Podłoże terenu (Góry/Wzgórza z matematycznego szumu sinusów)
-            const terrainGeo = new THREE.PlaneGeometry(1000, 1000, 120, 120);
+        // --- FUNKCJA OBLICZAJĄCA WYSOKOŚĆ TERENU W DANYM PUNKCIE X, Z ---
+        function getTerrainHeight(x, z) {
+            // Matematyczny wzór ukształtowania terenu (wzgórza) odpowiadający wygenerowanej geometrii
+            let y = Math.sin(x * 0.015) * Math.cos(z * 0.015) * 14;
+            y += Math.sin(x * 0.04) * Math.sin(z * 0.04) * 4;
+            
+            // Wypłaszczenie wokół startu gry
+            const dist = Math.sqrt(x*x + z*z);
+            if(dist < 50) y = THREE.MathUtils.lerp(0, y, dist/50);
+            return y;
+        }
+
+        // --- ZAAWANSOWANY PROCEDURALNY GENERATOR ŚWIATA (TEREN + KRĘTY TOR) ---
+        function buildProceduralWorld() {
+            // 1. Zaawansowany Teren (Góry i doliny)
+            const terrainGeo = new THREE.PlaneGeometry(1200, 1200, 140, 140);
             terrainGeo.rotateX(-Math.PI / 2);
             
             const pos = terrainGeo.attributes.position;
             for (let i = 0; i < pos.count; i++) {
                 const x = pos.getX(i);
                 const z = pos.getZ(i);
-                
-                // Matematyczne nakładanie fal udających naturalne ukształtowanie terenu
-                let y = Math.sin(x * 0.02) * Math.cos(z * 0.02) * 12;
-                y += Math.sin(x * 0.05) * 3; // Mniejsze pagórki
-                
-                // Tworzymy płaski płaskowyż na środku świata (wokół punktu startowego 0,0), żeby auto nie startowało w powietrzu
-                const distFromCenter = Math.sqrt(x*x + z*z);
-                if (distFromCenter < 60) {
-                    y = THREE.MathUtils.lerp(0, y, (distFromCenter / 60));
-                }
-                
-                pos.setY(i, y);
+                pos.setY(i, getTerrainHeight(x, z));
             }
             terrainGeo.computeVertexNormals();
             
-            // Kolorowanie terenu (Stylizowana zieleń)
-            const terrainMat = new THREE.MeshStandardMaterial({ color: 0x2e5c1e, roughness: 0.9, metalness: 0.1, flatShading: true });
-            const terrain = new THREE.Mesh(terrainGeo, terrainMat);
-            scene.add(terrain);
+            // Cieniowany, nowoczesny materiał trawy/gór
+            const terrainMat = new THREE.MeshStandardMaterial({ color: 0x24471b, roughness: 0.9, metalness: 0.05, flatShading: true });
+            const terrainMesh = new THREE.Mesh(terrainGeo, terrainMat);
+            scene.add(terrainMesh);
 
-            // 2. Proceduralna, nieskończona prosta droga do testowania prędkości
-            const roadGeo = new THREE.PlaneGeometry(12, 2000);
-            roadGeo.rotateX(-Math.PI / 2);
-            const roadMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.6 });
-            const road = new THREE.Mesh(roadGeo, roadMat);
-            road.position.set(0, 0.02, 0); // Lekko nad ziemią, by uniknąć migania tekstur (Z-fighting)
-            scene.add(road);
+            // 2. Generowanie krętego, płynnego toru wyścigowego (Matematyczna pętla)
+            const numPoints = 120;
+            const radiusX = 220;
+            const radiusZ = 340;
+            
+            for (let i = 0; i < numPoints; i++) {
+                const angle = (i / numPoints) * Math.PI * 2;
+                
+                // Matematyczne pofalowanie linii toru, by tworzyć ostre i łagodne zakręty
+                let x = Math.sin(angle) * radiusX + Math.sin(angle * 3) * 35;
+                let z = Math.cos(angle) * radiusZ + Math.cos(angle * 2) * 20;
+                let y = getTerrainHeight(x, z) + 0.06; // Delikatnie nad gruntem, by uniknąć z-fightingu
+                
+                trackPoints.push(new THREE.Vector3(x, y, z));
+            }
+            // Zamknięcie pętli toru
+            trackPoints.push(trackPoints[0].clone());
 
-            // Paski na drodze
-            const lineGeo = new THREE.PlaneGeometry(0.3, 2000);
-            lineGeo.rotateX(-Math.PI / 2);
+            // Tworzenie wstęgi drogi 3D na podstawie punktów
+            const curve = new THREE.CatmullRomCurve3(trackPoints);
+            const tubeGeo = new THREE.TubeGeometry(curve, 350, 9.0, 12, true); // Szerokość toru: 9.0
+            const roadMat = new THREE.MeshStandardMaterial({ color: 0x1c1c24, roughness: 0.7, metalness: 0.1 });
+            const roadMesh = new THREE.Mesh(tubeGeo, roadMat);
+            scene.add(roadMesh);
+
+            // Biała linia pomocnicza na środku toru
+            const lineTubeGeo = new THREE.TubeGeometry(curve, 350, 0.15, 4, true);
             const lineMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
-            const centerLine = new THREE.Mesh(lineGeo, lineMat);
-            centerLine.position.set(0, 0.03, 0);
-            scene.add(centerLine);
+            const lineMesh = new THREE.Mesh(lineTubeGeo, lineMat);
+            scene.add(lineMesh);
         }
 
-        // START SILNIKA 3D
+        // URUCHOMIENIE SILNIKA GRAFIKI
         function launchGame() {
             gameState = 'game'; loadingScreen.style.display = 'none'; canvasContainer.style.display = 'block';
             
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(0xb3e5fc);
-            scene.fog = new THREE.FogExp2(0xb3e5fc, 0.002);
+            scene.background = new THREE.Color(0x94d3ff);
+            scene.fog = new THREE.FogExp2(0x94d3ff, 0.0025);
             
             camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 2000);
+            
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Optymalizacja pod ekrany 4K
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Płynność na ekranach wysokiej rozdzielczości
+            renderer.shadowMap.enabled = false; // Maksymalny zysk wydajności
             canvasContainer.appendChild(renderer.domElement);
             
-            // Oświetlenie świata
-            scene.add(new THREE.AmbientLight(0xffffff, 0.7));
-            const sunLight = new THREE.DirectionalLight(0xffffff, 0.8);
-            sunLight.position.set(100, 200, 50);
-            scene.add(sunLight);
+            // Oświetlenie sceny
+            scene.add(new THREE.AmbientLight(0xffffff, 0.75));
+            const sun = new THREE.DirectionalLight(0xffffff, 0.6);
+            sun.position.set(150, 300, 100);
+            scene.add(sun);
 
-            // GENERUJEMY NOWY ŚWIAT Z KODU
-            generateProceduralWorld();
+            // Wywołanie generatora
+            buildProceduralWorld();
 
-            gltfLoader = new THREE.GLTFLoader();
+            gltfLoader = new GLTFLoader();
 
-            // Ładowanie Auta gracza
+            // Próba załadowania Twojego pliku auta z dysku
             gltfLoader.load(carConfigs[selectedCar].path,
-                (gltf) => { car = gltf.scene; car.scale.set(0.5, 0.5, 0.5); scene.add(car); completeInitialization(); },
+                (gltf) => { 
+                    car = gltf.scene; 
+                    car.scale.set(0.5, 0.5, 0.5); 
+                    car.position.set(0, 0.5, 0); 
+                    scene.add(car); 
+                    completeInitialization(); 
+                },
                 undefined,
-                () => { car = generateFallbackCar(0xff4444); scene.add(car); completeInitialization(); }
+                (err) => {
+                    console.warn(`Przeglądarka nie mogła wczytać pliku: ${carConfigs[selectedCar].path}. Uruchamiam automatyczny model zastępczy 3D.`);
+                    // System awaryjny: Tworzy piękne czerwone auto sportowe z czystego kodu
+                    car = generateStylizedCar(0xff2244);
+                    car.position.set(0, 0.5, 0);
+                    scene.add(car);
+                    completeInitialization();
+                }
             );
 
             window.addEventListener('resize', () => {
@@ -318,42 +407,47 @@
             animate(0);
         }
 
+        // PĘTLA ANIMACJI (0 laggów na RTX 4070)
         function animate(currentTime) {
             requestAnimationFrame(animate);
             
             if (car) {
-                // Fizyka przyspieszania i hamowania
+                // Zaawansowany model fizyki (Przyspieszanie / Wsteczny / Tarcie)
                 if (keys.forward) currentSpeed = THREE.MathUtils.lerp(currentSpeed, maxSpeed, acceleration);
-                else if (keys.backward) currentSpeed = THREE.MathUtils.lerp(currentSpeed, -maxSpeed/2, acceleration*1.5);
+                else if (keys.backward) currentSpeed = THREE.MathUtils.lerp(currentSpeed, -maxSpeed / 2, acceleration * 1.6);
                 else currentSpeed = THREE.MathUtils.lerp(currentSpeed, 0, friction);
 
-                // Skręcanie pojazdu
+                // Skręcanie reagujące na kierunek jazdy
                 if (Math.abs(currentSpeed) > 0.01) {
-                    const directionModifier = currentSpeed > 0 ? 1 : -1;
-                    if (keys.left) car.rotation.y += turnSpeed * directionModifier;
-                    if (keys.right) car.rotation.y -= turnSpeed * directionModifier;
+                    const multi = currentSpeed > 0 ? 1 : -1;
+                    if (keys.left) car.rotation.y += turnSpeed * multi;
+                    if (keys.right) car.rotation.y -= turnSpeed * multi;
                 }
 
-                // Aktualizacja pozycji
+                // Aktualizacja pozycji pojazdu na płaszczyźnie X i Z
                 car.position.x += Math.sin(car.rotation.y) * currentSpeed;
                 car.position.z += Math.cos(car.rotation.y) * currentSpeed;
 
-                // Liczniki w UI na ekranie
-                let speedKmh = Math.round(Math.abs(currentSpeed) * 140);
-                document.getElementById('speed').textContent = speedKmh;
-                document.getElementById('rpm').textContent = 1000 + Math.round(speedKmh * 35);
-                document.getElementById('gear').textContent = currentSpeed < -0.05 ? "R" : Math.max(1, Math.min(6, Math.floor(speedKmh/35)+1));
+                // DOPASOWANIE WYSOKOŚCI (Y) AUTA DO GENEROWANEGO TERENU non-stop
+                const currentGroundHeight = getTerrainHeight(car.position.x, car.position.z);
+                car.position.y = THREE.MathUtils.lerp(car.position.y, currentGroundHeight, 0.2);
 
-                // Kamera
+                // Aktualizacja danych w UI na ekranie
+                let speedKmh = Math.round(Math.abs(currentSpeed) * 135);
+                document.getElementById('speed').textContent = speedKmh;
+                document.getElementById('rpm').textContent = 1000 + Math.round(speedKmh * 38) + " RPM";
+                document.getElementById('gear').textContent = currentSpeed < -0.05 ? "R" : Math.max(1, Math.min(6, Math.floor(speedKmh / 35) + 1));
+
+                // Kamera (Stabilna i płynna za autem)
                 if (cameraViewMode === 'TPP') {
-                    camera.position.set(car.position.x - Math.sin(car.rotation.y) * 8, car.position.y + 3.0, car.position.z - Math.cos(car.rotation.y) * 8);
-                    camera.lookAt(car.position.x, car.position.y + 0.6, car.position.z);
+                    camera.position.set(car.position.x - Math.sin(car.rotation.y) * 8.5, car.position.y + 2.8, car.position.z - Math.cos(car.rotation.y) * 8.5);
+                    camera.lookAt(car.position.x, car.position.y + 0.5, car.position.z);
                 } else {
-                    camera.position.set(car.position.x, car.position.y + 1.2, car.position.z);
-                    camera.lookAt(car.position.x + Math.sin(car.rotation.y) * 10, car.position.y + 1.0, car.position.z + Math.cos(car.rotation.y) * 10);
+                    camera.position.set(car.position.x, car.position.y + 1.1, car.position.z);
+                    camera.lookAt(car.position.x + Math.sin(car.rotation.y) * 10, car.position.y + 0.9, car.position.z + Math.cos(car.rotation.y) * 10);
                 }
 
-                // Ograniczenie wysyłania pakietów sieciowych (Tickrate), by nie zapchać przeglądarki
+                // Kontrola sieciowa (Tickrate) – zapobiega zamrażaniu wątku JS
                 if (currentTime - lastNetworkUpdate > networkTickInterval) {
                     broadcast({ type: 'pos_update', p: car.position, r: car.rotation });
                     lastNetworkUpdate = currentTime;
@@ -365,6 +459,7 @@
             }
         }
 
+        // Zaznaczenie początkowe
         document.querySelector('.carOption[data-car="bmw_m5"]').classList.add('selected');
     </script>
 </body>
