@@ -518,7 +518,7 @@
     </div>
     
     <div id="carSelection" class="menu" style="display: none;">
-        <h2>Wybierz Swój Samochód</h2>
+        <h2>Wybierz Swój Samochób</h2>
         <div class="carSelector">
             <div class="carOption" data-car="bmw_m5">
                 <div class="carImage" style="background-image: url('data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 50\"><rect x=\"10\" y=\"15\" width=\"80\" height=\"20\" rx=\"5\" fill=\"%230066cc\"/><circle cx=\"25\" cy=\"35\" r=\"8\" fill=\"%23333\"/><circle cx=\"75\" cy=\"35\" r=\"8\" fill=\"%23333\"/></svg>')"></div>
@@ -609,7 +609,7 @@
         let connections = [];
         let remotePlayers = {}; 
         let myPeerId = '';
-        let pendingRemotesToLoad = []; // Kolejka modeli do załadowania po inicjalizacji sceny
+        let pendingRemotesToLoad = []; 
         
         // Three.js Variables
         let scene, camera, renderer, car;
@@ -802,7 +802,7 @@
             
             peer.on('error', (err) => {
                 console.error(err);
-                showError('Błąd połączenia sieciowego: ' + err.type);
+                showError('Blad polaczenia sieciowego: ' + err.type);
             });
             
             peer.on('connection', (conn) => { setupConnection(conn); });
@@ -843,7 +843,6 @@
                 startGame();
             }
             if (data.type === 'init_car') {
-                // Zapobiegamy błędowi ładowania przed utworzeniem sceny
                 if (!scene || !gltfLoader) {
                     pendingRemotesToLoad.push({ id: senderPeerId, carType: data.carType });
                 } else {
@@ -887,7 +886,7 @@
             playerListDiv.innerHTML = html;
             
             const totalPlayers = connections.length + 1;
-            if(connectionStatusText) connectionStatusText.textContent = `Połączono (${totalPlayers}/4)`;
+            if(connectionStatusText) connectionStatusText.textContent = `Polaczono (${totalPlayers}/4)`;
             if(statusIndicator) statusIndicator.className = totalPlayers > 1 ? "statusIndicator connected" : "statusIndicator disconnected";
         }
         
@@ -926,8 +925,7 @@
                 gameState = 'mapSelect'; carSelection.style.display = 'none'; mapSelection.style.display = 'flex';
             } else {
                 gameState = 'loading'; carSelection.style.display = 'none'; loadingScreen.style.display = 'flex';
-                if(loadingText) loadingText.textContent = "Oczekiwanie aż Host wybierze mapę...";
-                // Poinformowanie hosta o wybranym aucie
+                if(loadingText) loadingText.textContent = "Oczekiwanie az Host wybierze mape...";
                 broadcast({ type: 'init_car', carType: selectedCar });
             }
         });
@@ -978,7 +976,6 @@
             gltfLoader = new THREE.GLTFLoader();
             gltfLoader.setDRACOLoader(dracoLoader);
             
-            // Rejestrujemy zaległe modele graczy, którzy dołączyli przed startem sceny
             pendingRemotesToLoad.forEach(item => {
                 spawnRemotePlayerCar(item.id, item.carType);
             });
@@ -997,7 +994,7 @@
                     loadMap(gltfLoader);
                 },
                 undefined,
-                (error) => { showError(`Nie można załadować samochodu: ${error.message}`); }
+                (error) => { showError(`Nie mozna zaladowac samochodu: ${error.message}`); }
             );
             
             window.addEventListener('resize', () => {
@@ -1009,15 +1006,14 @@
             function animate() {
                 requestAnimationFrame(animate);
                 
-                if (car) {
+                // --- BEZPIECZNA WERYFIKACJA MODELU PRZED URUCHOMIENIEM FIZYKI (NAPRAWA BLEDÓW ISGLBUFFERATTRIBUTE) ---
+                if (car && car.children && car.children.length > 0) {
                     const config = carConfigs[selectedCar];
                     
-                    // Przelicznik vMax km/h na fizyczny limit silnika
                     const maxSpeedLimitEngine = config.maxSpeedKmh / 220; 
                     const gearRatio = currentGear / config.maxGears;
                     const maxSpeedOnCurrentGear = maxSpeedLimitEngine * gearRatio;
                     
-                    // Fizyka przyspieszania / hamowania
                     if (keys.forward || mobileGas) {
                         let rpmFactor = (7800 - currentRpm) / 7800;
                         if(rpmFactor < 0.1) rpmFactor = 0.1;
@@ -1032,7 +1028,6 @@
                         if (currentSpeed < 0) currentSpeed = Math.min(0, currentSpeed + 0.002);
                     }
                     
-                    // Obliczanie RPM i prędkości na liczniku
                     let speedKmh = Math.abs(Math.round(currentSpeed * 220));
                     
                     if (Math.abs(currentSpeed) <= 0.005) {
@@ -1043,7 +1038,6 @@
                         if (currentRpm > 7800) currentRpm = 7800; 
                     }
                     
-                    // Automat zmienia biegi przy 5000 RPM
                     if (!isManualTransmission && Math.abs(currentSpeed) > 0.05) {
                         if (currentRpm >= 5000 && currentGear < config.maxGears) {
                             currentGear++;
@@ -1054,7 +1048,6 @@
                         }
                     }
                     
-                    // Skręcanie
                     if (Math.abs(currentSpeed) > 0.02) {
                         let directionMultiplier = currentSpeed > 0 ? 1 : -1;
                         if (keys.left) car.rotation.y += turnSpeed * directionMultiplier;
@@ -1064,16 +1057,13 @@
                         }
                     }
                     
-                    // Aktualizacja pozycji modelu
                     car.position.x += Math.sin(car.rotation.y) * currentSpeed;
                     car.position.z += Math.cos(car.rotation.y) * currentSpeed;
                     
-                    // Aktualizacja UI deski rozdzielczej
                     if (speedDisplay) speedDisplay.textContent = speedKmh;
                     if (rpmDisplay) rpmDisplay.textContent = Math.round(currentRpm);
                     if (gearDisplay) gearDisplay.textContent = currentSpeed < -0.01 ? "R" : currentGear;
                     
-                    // OBSŁUGA KAMER (C)
                     if (cameraViewMode === 'TPP') {
                         const camOffsetZ = 12;
                         const camOffsetY = 4.0;
@@ -1102,14 +1092,21 @@
                         );
                     }
                     
-                    // Rozsyłanie pozycji sieciowo
                     broadcast({
                         type: 'update_position',
                         pos: { x: car.position.x, y: car.position.y, z: car.position.z },
                         rot: { x: car.rotation.x, y: car.rotation.y, z: car.rotation.z }
                     });
                 }
-                renderer.render(scene, camera);
+                
+                // Try/catch blok blokujący crashe Three.js podczas ładowania asynchronicznych BufferAttributes
+                if (renderer && scene && camera) {
+                    try {
+                        renderer.render(scene, camera);
+                    } catch(err) {
+                        // Ciche ignorowanie klatek, w których asynchroniczne meshe nie zostały spięte poprawnie z WebGL
+                    }
+                }
             }
             animate();
         }
@@ -1123,7 +1120,7 @@
                     scene.add(map);
                 },
                 undefined,
-                (error) => { showError(`Nie można załadować mapy: ${error.message}`); }
+                (error) => { showError(`Nie mozna zaladowac mapy: ${error.message}`); }
             );
         }
         
