@@ -10,6 +10,7 @@
         .hidden { display: none !important; }
         button { padding: 15px 30px; margin: 10px; cursor: pointer; }
         #ui { position: absolute; top: 20px; left: 20px; pointer-events: none; color: #0f0; }
+        #peer-info { margin-top: 20px; color: yellow; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -22,10 +23,10 @@
         <button onclick="show('p2p-menu')">MULTIPLAYER</button>
     </div>
     <div id="p2p-menu" class="hidden">
-        <button id="host-btn">STWÓRZ LOBBY</button><br>
+        <button id="create-lobby">STWÓRZ LOBBY</button>
+        <div id="peer-info"></div><br>
         <input id="peer-id" placeholder="ID hosta">
         <button onclick="joinGame()">DOŁĄCZ</button>
-        <p id="my-id-display"></p>
     </div>
     <div id="car-select" class="hidden">
         <button onclick="selectCar('bmw_m5.glb', 270, 0.00004)">BMW M5 (Stabilne)</button>
@@ -46,21 +47,37 @@
     document.body.appendChild(r.domElement); r.setSize(innerWidth, innerHeight);
     s.add(new THREE.AmbientLight(0xffffff, 2));
 
-    let car, peer = new Peer(), conn, carData, vel = 0, k = {};
+    let car, peer = new Peer(), conn, carData, vel = 0, k = {}, currentSteer = 0;
     let remoteCar;
 
     const loader = new GLTFLoader().setDRACOLoader(new DRACOLoader().setDecoderPath('https://www.gstatic.com/draco/v1/decoders/'));
 
     window.show = (id) => { document.querySelectorAll('#menu > div').forEach(d => d.classList.add('hidden')); document.getElementById(id).classList.remove('hidden'); };
     window.initGame = (multi) => { show('car-select'); };
-    
-    // Multiplayer Host/Join
-    document.getElementById('host-btn').onclick = () => { peer.on('open', id => document.getElementById('my-id-display').innerText = "Twój ID: " + id); };
-    window.joinGame = () => { conn = peer.connect(document.getElementById('peer-id').value); setupConn(); initGame(true); };
-    peer.on('connection', (c) => { conn = c; setupConn(); });
+
+    // Multiplayer Logika
+    document.getElementById('create-lobby').onclick = () => {
+        peer.on('open', (id) => {
+            document.getElementById('peer-info').innerText = "TWÓJ ID: " + id;
+            console.log("Lobby otwarte, ID:", id);
+        });
+    };
+
+    window.joinGame = () => {
+        let targetId = document.getElementById('peer-id').value;
+        conn = peer.connect(targetId);
+        setupConn();
+        initGame(true);
+    };
+
+    peer.on('connection', (c) => { 
+        conn = c; 
+        console.log("Ktoś dołączył!"); 
+        setupConn(); 
+    });
 
     function setupConn() {
-        conn.on('open', () => console.log("Połączono!"));
+        conn.on('open', () => console.log("Połączono z graczem!"));
         conn.on('data', (d) => {
             if(!remoteCar) loader.load('bmw_m5.glb', (g) => { remoteCar = g.scene; remoteCar.scale.set(0.05, 0.05, 0.05); s.add(remoteCar); });
             if(remoteCar) { remoteCar.position.set(d.p.x, d.p.y, d.p.z); remoteCar.rotation.y = d.r; }
@@ -85,9 +102,11 @@
             if(k['w']) vel = Math.min(vel + carData.acc, carData.max / 5000);
             else vel *= 0.99;
             
-            // Poprawiony skręt: mniejszy mnożnik (40 zamiast 100)
-            let steer = (k['a'] ? 0.05 : 0) - (k['d'] ? 0.05 : 0);
-            car.rotation.y += steer * (vel * 40); 
+            // Wygładzone sterowanie (lerp)
+            let targetSteer = (k['a'] ? 0.04 : 0) - (k['d'] ? 0.04 : 0);
+            currentSteer += (targetSteer - currentSteer) * 0.1; 
+            car.rotation.y += currentSteer * (vel * 20); 
+            
             car.position.x += Math.sin(car.rotation.y) * vel;
             car.position.z += Math.cos(car.rotation.y) * vel;
 
