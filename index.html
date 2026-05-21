@@ -5,12 +5,11 @@
     <title>RACE MASTER 3D</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
-        body { margin: 0; background: #000; color: #fff; font-family: sans-serif; overflow: hidden; }
-        #menu { position: absolute; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; background: #111; z-index: 10; }
+        body { margin: 0; background: #111; color: #fff; font-family: sans-serif; overflow: hidden; }
+        #menu { position: absolute; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; background: #000; z-index: 10; }
         .hidden { display: none !important; }
-        button { padding: 15px 30px; margin: 10px; cursor: pointer; font-size: 1.2rem; background: #222; color: #fff; border: 1px solid #555; }
-        button:hover { background: #444; }
-        #ui { position: absolute; top: 20px; left: 20px; pointer-events: none; font-size: 20px; color: #0f0; }
+        button { padding: 15px 30px; margin: 10px; cursor: pointer; font-size: 1.2rem; }
+        #ui { position: absolute; top: 20px; left: 20px; pointer-events: none; font-size: 24px; color: #0f0; }
     </style>
 </head>
 <body>
@@ -20,21 +19,16 @@
         <h1>RACE MASTER 3D</h1>
         <button onclick="show('mode-select')">START</button>
     </div>
-
     <div id="mode-select" class="hidden">
-        <h2>WYBIERZ TRYB</h2>
         <button onclick="initGame(false)">SINGLE PLAYER</button>
         <button onclick="show('p2p-menu')">MULTIPLAYER</button>
     </div>
-
     <div id="p2p-menu" class="hidden">
         <button onclick="initGame(true)">STWÓRZ LOBBY</button><br>
         <input id="peer-id" placeholder="ID hosta">
         <button onclick="joinGame()">DOŁĄCZ</button>
     </div>
-
     <div id="car-select" class="hidden">
-        <h2>WYBIERZ AUTO</h2>
         <button onclick="selectCar('bmw_m5.glb', 270, 0.00004)">BMW M5 (Stabilne)</button>
         <button onclick="selectCar('porshe.glb', 330, 0.00009)">PORSHE (Szybkie)</button>
     </div>
@@ -49,16 +43,13 @@
     import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
     import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 
-    let s = new THREE.Scene(), c = new THREE.PerspectiveCamera(75, innerWidth/innerHeight, 0.1, 1000), r = new THREE.WebGLRenderer({antialias: true});
+    let s = new THREE.Scene(), c = new THREE.PerspectiveCamera(75, innerWidth/innerHeight, 0.001, 1000), r = new THREE.WebGLRenderer({antialias: true});
     document.body.appendChild(r.domElement); r.setSize(innerWidth, innerHeight);
     s.add(new THREE.AmbientLight(0xffffff, 2));
+    s.add(new THREE.DirectionalLight(0xffffff, 1));
 
     let car, peer = new Peer(), conn, carData, vel = 0, k = {};
-
-    const dracoLoader = new DRACOLoader();
-    dracoLoader.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/');
-    const loader = new GLTFLoader();
-    loader.setDRACOLoader(dracoLoader);
+    const loader = new GLTFLoader().setDRACOLoader(new DRACOLoader().setDecoderPath('https://www.gstatic.com/draco/v1/decoders/'));
 
     window.show = (id) => {
         document.querySelectorAll('#menu > div').forEach(d => d.classList.add('hidden'));
@@ -75,25 +66,14 @@
         loader.load(model, (g) => { 
             car = g.scene; 
             car.scale.set(0.01, 0.01, 0.01); 
-            // Ustawienie auta przodem do przodu (zależnie od modelu, jeśli jedzie tyłem, zmień na 0)
-            car.rotation.y = Math.PI; 
+            car.position.y = 0.01; // Lekkie uniesienie auta nad asfalt
             s.add(car); 
         });
-
-        loader.load('mapa1.glb', (g) => { 
-            g.scene.scale.set(10, 10, 10); 
-            // Obrót mapy o 180 stopni
-            g.scene.rotation.y = Math.PI; 
-            s.add(g.scene); 
-        });
+        loader.load('mapa1.glb', (g) => { g.scene.scale.set(10, 10, 10); s.add(g.scene); });
         animate();
     };
 
-    window.joinGame = () => {
-        conn = peer.connect(document.getElementById('peer-id').value);
-        initGame(true);
-    };
-
+    window.joinGame = () => { conn = peer.connect(document.getElementById('peer-id').value); initGame(true); };
     peer.on('connection', (c) => conn = c);
 
     window.onkeydown = (e) => k[e.key.toLowerCase()] = true;
@@ -104,19 +84,16 @@
         if(car) {
             if(k['w']) vel = Math.min(vel + carData.acc, carData.max / 5000);
             else vel *= 0.99;
-            
             car.rotation.y += (k['a'] ? 0.02 : 0) - (k['d'] ? 0.02 : 0);
             car.position.x += Math.sin(car.rotation.y) * vel;
             car.position.z += Math.cos(car.rotation.y) * vel;
 
+            // Kamera sztywno za autem (skala 0.01 wymaga małych wartości)
+            let camOffset = new THREE.Vector3(0, 0.03, -0.08).applyAxisAngle(new THREE.Vector3(0,1,0), car.rotation.y);
+            c.position.copy(car.position).add(camOffset);
+            c.lookAt(car.position.clone().add(new THREE.Vector3(0, 0, 0.05).applyAxisAngle(new THREE.Vector3(0,1,0), car.rotation.y)));
+
             if(conn && conn.open) conn.send({p: car.position, r: car.rotation});
-            
-            // Kamera za autem
-            let camOffset = new THREE.Vector3(0, 0.05, 0.15);
-            camOffset.applyAxisAngle(new THREE.Vector3(0,1,0), car.rotation.y);
-            c.position.lerp(car.position.clone().add(camOffset), 0.1);
-            c.lookAt(car.position);
-            
             document.getElementById('hud').innerText = `Prędkość: ${Math.floor(vel * 5000)} km/h`;
         }
         r.render(s, c);
