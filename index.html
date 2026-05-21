@@ -22,9 +22,10 @@
         <button onclick="show('p2p-menu')">MULTIPLAYER</button>
     </div>
     <div id="p2p-menu" class="hidden">
-        <button onclick="initGame(true)">STWÓRZ LOBBY</button><br>
+        <button id="host-btn">STWÓRZ LOBBY</button><br>
         <input id="peer-id" placeholder="ID hosta">
         <button onclick="joinGame()">DOŁĄCZ</button>
+        <p id="my-id-display"></p>
     </div>
     <div id="car-select" class="hidden">
         <button onclick="selectCar('bmw_m5.glb', 270, 0.00004)">BMW M5 (Stabilne)</button>
@@ -45,17 +46,21 @@
     document.body.appendChild(r.domElement); r.setSize(innerWidth, innerHeight);
     s.add(new THREE.AmbientLight(0xffffff, 2));
 
-    let car, peer = new Peer(), conn, carData, vel = 0, k = {}, isMulti = false;
-    let remoteCar; // Auto drugiego gracza
+    let car, peer = new Peer(), conn, carData, vel = 0, k = {};
+    let remoteCar;
 
     const loader = new GLTFLoader().setDRACOLoader(new DRACOLoader().setDecoderPath('https://www.gstatic.com/draco/v1/decoders/'));
 
     window.show = (id) => { document.querySelectorAll('#menu > div').forEach(d => d.classList.add('hidden')); document.getElementById(id).classList.remove('hidden'); };
-    window.initGame = (multi) => { isMulti = multi; show('car-select'); };
+    window.initGame = (multi) => { show('car-select'); };
+    
+    // Multiplayer Host/Join
+    document.getElementById('host-btn').onclick = () => { peer.on('open', id => document.getElementById('my-id-display').innerText = "Twój ID: " + id); };
     window.joinGame = () => { conn = peer.connect(document.getElementById('peer-id').value); setupConn(); initGame(true); };
     peer.on('connection', (c) => { conn = c; setupConn(); });
 
     function setupConn() {
+        conn.on('open', () => console.log("Połączono!"));
         conn.on('data', (d) => {
             if(!remoteCar) loader.load('bmw_m5.glb', (g) => { remoteCar = g.scene; remoteCar.scale.set(0.05, 0.05, 0.05); s.add(remoteCar); });
             if(remoteCar) { remoteCar.position.set(d.p.x, d.p.y, d.p.z); remoteCar.rotation.y = d.r; }
@@ -80,9 +85,9 @@
             if(k['w']) vel = Math.min(vel + carData.acc, carData.max / 5000);
             else vel *= 0.99;
             
-            // Realistyczny skręt zależny od prędkości
+            // Poprawiony skręt: mniejszy mnożnik (40 zamiast 100)
             let steer = (k['a'] ? 0.05 : 0) - (k['d'] ? 0.05 : 0);
-            car.rotation.y += steer * (vel * 100); 
+            car.rotation.y += steer * (vel * 40); 
             car.position.x += Math.sin(car.rotation.y) * vel;
             car.position.z += Math.cos(car.rotation.y) * vel;
 
@@ -91,6 +96,7 @@
             let camOffset = new THREE.Vector3(0, 0.3, -0.5).applyAxisAngle(new THREE.Vector3(0,1,0), car.rotation.y);
             c.position.copy(car.position).add(camOffset);
             c.lookAt(car.position.clone().add(new THREE.Vector3(0, 0, 0.05).applyAxisAngle(new THREE.Vector3(0,1,0), car.rotation.y)));
+            
             document.getElementById('hud').innerText = `Prędkość: ${Math.floor(vel * 5000)} km/h`;
         }
         r.render(s, c);
