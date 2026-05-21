@@ -2,92 +2,80 @@
 <html lang="pl">
 <head>
     <meta charset="UTF-8">
-    <title>RACE MASTER 3D</title>
     <style>
-        body { margin: 0; background: #000; color: #fff; overflow: hidden; font-family: sans-serif; }
-        #m { 
-            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; 
-            display: flex; flex-direction: column; justify-content: center; align-items: center; 
-            background: radial-gradient(circle, #222, #000); z-index: 100;
-        }
-        h1 { font-size: 4rem; color: #00d4ff; text-shadow: 0 0 10px #00d4ff; margin-bottom: 20px; }
-        button { 
-            padding: 20px 60px; font-size: 2rem; cursor: pointer; 
-            background: transparent; color: #fff; border: 2px solid #00d4ff; 
-            border-radius: 50px; transition: 0.3s; 
-        }
-        button:hover { background: #00d4ff; color: #000; box-shadow: 0 0 20px #00d4ff; }
-        .info { margin-top: 20px; color: #666; }
+        body { margin: 0; background: #000; color: #fff; font-family: sans-serif; overflow: hidden; }
+        #ui { position: absolute; top: 20px; left: 20px; pointer-events: none; }
+        #hud { font-size: 24px; font-weight: bold; color: #00ff00; }
+        #menu { position: absolute; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; background: #000; }
+        button { padding: 20px 40px; font-size: 20px; cursor: pointer; }
     </style>
 </head>
 <body>
 
-<div id="m">
+<div id="menu">
     <h1>RACE MASTER 3D</h1>
     <button id="s">START</button>
-    <p class="info">W: Gaz | A/D: Skręt | S: Hamulec | V: Kamera</p>
+    <p>Sterowanie: W/A/S/D | V: Kamera | M: Tryb Manual/Auto | Ctrl: Bieg+ | Shift: Bieg-</p>
 </div>
 
-<!-- Załadowanie Three.js przez CDN -->
-<script type="importmap">
-  {
-    "imports": {
-      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
-    }
-  }
-</script>
+<div id="ui">
+    <div id="hud">Bieg: 1 | Prędkość: 0 km/h | Tryb: AUTO</div>
+</div>
+
+<script type="importmap">{ "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js", "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/" } }</script>
 
 <script type="module">
     import * as THREE from 'three';
     import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-    import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 
-    let s = new THREE.Scene(), 
-        c = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.01, 1000), 
-        r = new THREE.WebGLRenderer({antialias: true});
-    
-    r.setSize(window.innerWidth, window.innerHeight);
-    document.body.appendChild(r.domElement);
-    
+    let s = new THREE.Scene(), c = new THREE.PerspectiveCamera(75, innerWidth/innerHeight, 0.01, 1000), r = new THREE.WebGLRenderer();
+    r.setSize(innerWidth, innerHeight); document.body.appendChild(r.domElement);
     s.add(new THREE.AmbientLight(0xffffff, 2));
-    let dirLight = new THREE.DirectionalLight(0xffffff, 1);
-    dirLight.position.set(5, 5, 5);
-    s.add(dirLight);
 
-    let car, vel = 0, gear = 1, view = 0, k = {};
+    let car, vel = 0, gear = 1, manual = false, view = 0, k = {};
+    const hud = document.getElementById('hud');
 
     document.getElementById('s').onclick = () => {
-        document.getElementById('m').style.display = 'none';
-        
+        document.getElementById('menu').style.display = 'none';
         const l = new GLTFLoader();
-        // Ładowanie modelu (dla testu, jeśli nie masz pliku, to nie wyrzuci błędu krytycznego)
-        l.load('./bmw_m4.glb', (g) => { 
-            car = g.scene; 
-            car.scale.set(0.01, 0.01, 0.01); // 100x mniejsze
-            s.add(car); 
-        }, undefined, (err) => console.log("Brak pliku .glb, użyj poprawnej ścieżki"));
-
+        l.load('./bmw_m4.glb', (g) => { car = g.scene; car.scale.set(0.05, 0.05, 0.05); s.add(car); });
         animate();
     };
 
-    window.onkeydown = (e) => { k[e.key.toLowerCase()] = true; if(e.key === 'v') view = !view; };
-    window.onkeyup = (e) => { k[e.key.toLowerCase()] = false; };
+    window.onkeydown = (e) => {
+        k[e.key.toLowerCase()] = true;
+        if(e.key === 'v') view = !view;
+        if(e.key.toLowerCase() === 'm') manual = !manual;
+        if(e.key === 'Control') gear = Math.min(gear + 1, 6);
+        if(e.key === 'Shift') gear = Math.max(gear - 1, 1);
+    };
+    window.onkeyup = (e) => k[e.key.toLowerCase()] = false;
 
     function animate() {
         requestAnimationFrame(animate);
         if(car) {
-            if(k['w']) vel += 0.0001; else if(k['s']) vel -= 0.0001; else vel *= 0.98;
-            if(k['a']) car.rotation.y += 0.02; if(k['d']) car.rotation.y -= 0.02;
+            // Automatyczna skrzynia
+            if(!manual) gear = Math.max(1, Math.min(6, Math.floor(vel * 200) + 1));
+            
+            // Fizyka
+            if(k['w']) vel += 0.00005 * gear; 
+            else if(k['s']) vel -= 0.0001; 
+            else vel *= 0.99;
+            vel = Math.max(0, vel);
+            
+            if(k['a']) car.rotation.y += 0.02; 
+            if(k['d']) car.rotation.y -= 0.02;
             
             car.position.x += Math.sin(car.rotation.y) * vel;
             car.position.z += Math.cos(car.rotation.y) * vel;
 
-            // Kamera podąża za małym autem
-            let offset = view ? new THREE.Vector3(0, 0.04, 0.1) : new THREE.Vector3(0, 0.01, 0.04);
+            // Kamera: 0=zewnątrz, 1=wnętrze
+            let offset = view ? new THREE.Vector3(0, 0.01, 0.005) : new THREE.Vector3(0, 0.05, 0.15);
             offset.applyAxisAngle(new THREE.Vector3(0,1,0), car.rotation.y);
             c.position.lerp(car.position.clone().add(offset), 0.1);
-            c.lookAt(car.position);
+            c.lookAt(car.position.clone().add(new THREE.Vector3(0, 0, 0.1).applyAxisAngle(new THREE.Vector3(0,1,0), car.rotation.y)));
+
+            hud.innerText = `Bieg: ${gear} | Prędkość: ${Math.floor(vel * 5000)} km/h | Tryb: ${manual ? 'MANUAL' : 'AUTO'}`;
         }
         r.render(s, c);
     }
