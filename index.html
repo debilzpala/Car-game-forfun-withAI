@@ -3,487 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Gra 3D - Multiplayer P2P z Lokalnymi Plikami</title>
+    <title>Gra 3D - Racing Master P2P</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-        
-        body {
-            overflow: hidden;
-            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #1a2a6c);
-            height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            color: white;
-        }
-        
-        #gameContainer {
-            position: relative;
-            width: 100%;
-            height: 100%;
-        }
-        
-        #canvasContainer {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            display: none;
-        }
-        
-        canvas {
-            display: block;
-        }
-        
-        /* MENU STYLES */
-        .menu {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            background: rgba(0, 0, 0, 0.85);
-            z-index: 100;
-            padding: 20px;
-            text-align: center;
-        }
-        
-        .menu h1 {
-            font-size: 3.5rem;
-            margin-bottom: 20px;
-            text-transform: uppercase;
-            letter-spacing: 3px;
-            background: linear-gradient(to right, #ff8a00, #e52e71);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            text-shadow: 0 0 10px rgba(255, 138, 0, 0.5);
-        }
-        
-        .menu h2 {
-            font-size: 2.5rem;
-            margin: 20px 0;
-            color: #ff8a00;
-        }
-        
-        .menu button {
-            background: linear-gradient(45deg, #ff8a00, #e52e71);
-            border: none;
-            padding: 15px 40px;
-            margin: 15px 0;
-            font-size: 1.4rem;
-            color: white;
-            border-radius: 50px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-            width: 300px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            font-weight: bold;
-        }
-        
-        .menu button:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
-            background: linear-gradient(45deg, #ff9a3d, #ec407a);
-        }
-        
-        .menu input {
-            padding: 15px;
-            width: 300px;
-            margin: 15px 0;
-            font-size: 1.2rem;
-            border: 2px solid #ff8a00;
-            border-radius: 50px;
-            background: rgba(0, 0, 0, 0.5);
-            color: white;
-            text-align: center;
-        }
-        
-        .menu input::placeholder {
-            color: #aaa;
-        }
-        
-        .backButton {
-            background: rgba(255, 255, 255, 0.1) !important;
-            border: 1px solid #ff8a00 !important;
-            margin-top: 30px;
-        }
-        
-        /* CAR SELECTOR */
-        .carSelector {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            gap: 20px;
-            margin: 20px 0;
-            max-width: 800px;
-        }
-        
-        .carOption {
-            width: 200px;
-            height: 150px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 15px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            border: 2px solid transparent;
-            overflow: hidden;
-        }
-        
-        .carOption:hover {
-            transform: scale(1.05);
-            border-color: #ff8a00;
-            box-shadow: 0 0 20px rgba(255, 138, 0, 0.5);
-        }
-        
-        .carOption.selected {
-            border-color: #e52e71;
-            background: rgba(229, 46, 113, 0.2);
-            box-shadow: 0 0 20px rgba(229, 46, 113, 0.5);
-        }
-        
-        .carImage {
-            width: 100%;
-            height: 100px;
-            background-size: contain;
-            background-repeat: no-repeat;
-            background-position: center;
-        }
-        
-        .carName {
-            margin-top: 10px;
-            font-size: 1.1rem;
-            font-weight: bold;
-        }
-        
-        /* MAP SELECTOR */
-        .mapSelector {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            gap: 20px;
-            margin: 20px 0;
-            max-width: 800px;
-        }
-        
-        .mapOption {
-            width: 200px;
-            height: 150px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 15px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            border: 2px solid transparent;
-            overflow: hidden;
-        }
-        
-        .mapOption:hover {
-            transform: scale(1.05);
-            border-color: #ff8a00;
-            box-shadow: 0 0 20px rgba(255, 138, 0, 0.5);
-        }
-        
-        .mapOption.selected {
-            border-color: #e52e71;
-            background: rgba(229, 46, 113, 0.2);
-            box-shadow: 0 0 20px rgba(229, 46, 113, 0.5);
-        }
-        
-        .mapImage {
-            width: 100%;
-            height: 100px;
-            background-size: cover;
-            background-repeat: no-repeat;
-            background-position: center;
-        }
-        
-        .mapName {
-            margin-top: 10px;
-            font-size: 1.1rem;
-            font-weight: bold;
-        }
-        
-        /* LOADING SCREEN */
-        #loadingScreen {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.9);
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 200;
-            display: none;
-        }
-        
-        .loader {
-            width: 80px;
-            height: 80px;
-            border: 8px solid rgba(255, 255, 255, 0.1);
-            border-top: 8px solid #ff8a00;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin-bottom: 30px;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        #loadingText {
-            font-size: 1.5rem;
-            text-align: center;
-            max-width: 80%;
-        }
-        
-        /* GAME UI */
-        #ui {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            color: white;
-            font-size: 18px;
-            font-weight: bold;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
-            pointer-events: none;
-            background: rgba(0,0,0,0.5);
-            padding: 15px;
-            border-radius: 8px;
-            line-height: 1.4;
-            z-index: 10;
-        }
-        
-        #popup {
-            position: absolute;
-            top: 25%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            color: #fff;
-            background: rgba(229, 46, 113, 0.9);
-            padding: 15px 30px;
-            font-size: 24px;
-            font-weight: bold;
-            border-radius: 30px;
-            text-transform: uppercase;
-            box-shadow: 0 0 15px rgba(0,0,0,0.5);
-            pointer-events: none;
-            opacity: 0;
-            transition: opacity 0.2s ease-in-out;
-            z-index: 10;
-        }
-        
-        #instrukcja {
-            position: absolute;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            color: white;
-            background: rgba(0,0,0,0.6);
-            padding: 10px 20px;
-            border-radius: 10px;
-            pointer-events: none;
-            text-align: center;
-            font-size: 14px;
-            z-index: 10;
-        }
-        
-        .highlight {
-            color: #ff8a00;
-        }
-        
-        /* MOBILE CONTROLS */
-        #mobileControls {
-            display: none;
-            position: absolute;
-            bottom: 30px;
-            left: 0;
-            width: 100%;
-            height: 160px;
-            z-index: 30;
-            pointer-events: none;
-        }
-        
-        #joystickZone {
-            position: absolute;
-            left: 40px;
-            bottom: 20px;
-            width: 130px;
-            height: 130px;
-            background: rgba(255,255,255,0.15);
-            border: 3px solid rgba(255,255,255,0.4);
-            border-radius: 50%;
-            pointer-events: auto;
-        }
-        
-        #joystickStick {
-            position: absolute;
-            left: 40px;
-            top: 40px;
-            width: 50px;
-            height: 50px;
-            background: rgba(255, 138, 0, 0.8);
-            border-radius: 50%;
-            box-shadow: 0 0 10px rgba(0,0,0,0.5);
-            transition: transform 0.05s linear;
-        }
-        
-        #pedalsZone {
-            position: absolute;
-            right: 40px;
-            bottom: 20px;
-            width: 180px;
-            height: 130px;
-            pointer-events: auto;
-            display: flex;
-            gap: 20px;
-        }
-        
-        .pedal {
-            flex: 1;
-            height: 100%;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: bold;
-            font-size: 20px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.4);
-            text-transform: uppercase;
-            user-select: none;
-            -webkit-user-select: none;
-        }
-        
-        #brakePedal {
-            background: rgba(220, 20, 60, 0.6);
-            border: 2px solid #dc143c;
-        }
-        
-        #brakePedal:active {
-            background: rgba(220, 20, 60, 0.9);
-        }
-        
-        #gasPedal {
-            background: rgba(46, 139, 87, 0.6);
-            border: 2px solid #2e8b57;
-        }
-        
-        #gasPedal:active {
-            background: rgba(46, 139, 87, 0.9);
-        }
-        
-        #camBtnMobile {
-            position: absolute;
-            top: 20px;
-            right: 260px;
-            background: rgba(0,0,0,0.6);
-            border: 1px solid white;
-            color: white;
-            padding: 10px 15px;
-            border-radius: 6px;
-            font-weight: bold;
-            z-index: 30;
-            display: none;
-            cursor: pointer;
-        }
-        
-        /* PLAYER LIST */
-        #playerList {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: rgba(0,0,0,0.7);
-            padding: 15px;
-            border-radius: 8px;
-            color: white;
-            font-weight: bold;
-            z-index: 10;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-            min-width: 200px;
-        }
-        
-        .playerItem {
-            padding: 5px 0;
-            border-bottom: 1px solid rgba(255,255,255,0.2);
-        }
-        
-        .playerItem:last-child {
-            border-bottom: none;
-        }
-        
-        .playerItem.me {
-            color: #ff8a00;
-        }
-        
-        /* CONNECTION STATUS */
-        #connectionStatus {
-            position: absolute;
-            bottom: 20px;
-            right: 20px;
-            background: rgba(0,0,0,0.7);
-            padding: 10px 15px;
-            border-radius: 8px;
-            color: white;
-            font-weight: bold;
-            z-index: 10;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-        }
-        
-        .statusIndicator {
-            display: inline-block;
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            margin-right: 8px;
-        }
-        
-        .connected {
-            background: #4caf50;
-        }
-        
-        .disconnected {
-            background: #f44336;
-        }
-        
-        /* ERROR MESSAGE */
-        #errorMessage {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(255, 0, 0, 0.8);
-            padding: 20px;
-            border-radius: 10px;
-            color: white;
-            font-weight: bold;
-            text-align: center;
-            z-index: 1000;
-            display: none;
-            max-width: 80%;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: sans-serif; }
+        body { overflow: hidden; background: #111; height: 100vh; display: flex; justify-content: center; align-items: center; color: white; }
+        #gameContainer { position: relative; width: 100%; height: 100%; }
+        #canvasContainer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: none; }
+        canvas { display: block; }
+        .menu { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; background: rgba(0, 0, 0, 0.9); z-index: 100; text-align: center; }
+        .menu h1 { font-size: 3rem; margin-bottom: 20px; color: #ff8a00; text-transform: uppercase; }
+        .menu button { background: linear-gradient(45deg, #ff8a00, #e52e71); border: none; padding: 15px 40px; margin: 10px; font-size: 1.2rem; color: white; border-radius: 25px; cursor: pointer; width: 280px; font-weight: bold; }
+        .menu input { padding: 12px; width: 280px; margin: 10px; font-size: 1.1rem; border: 2px solid #ff8a00; border-radius: 25px; background: #000; color: #fff; text-align: center; }
+        .backButton { background: #333 !important; }
+        .carSelector { display: flex; gap: 20px; margin: 20px; }
+        .carOption { padding: 20px; background: #222; border-radius: 10px; cursor: pointer; border: 2px solid transparent; width: 180px; }
+        .carOption.selected { border-color: #e52e71; background: #331122; }
+        #loadingScreen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #000; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 200; display: none; }
+        .loader { width: 60px; height: 60px; border: 6px solid #333; border-top: 6px solid #ff8a00; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 20px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        #ui { position: absolute; top: 20px; left: 20px; color: white; font-size: 18px; font-weight: bold; background: rgba(0,0,0,0.6); padding: 15px; border-radius: 8px; z-index: 10; line-height: 1.5; }
+        #instrukcja { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.7); padding: 10px 20px; border-radius: 8px; text-align: center; font-size: 14px; z-index: 10; }
+        .highlight { color: #ff8a00; }
+        #playerList { position: absolute; top: 20px; right: 20px; background: rgba(0,0,0,0.7); padding: 15px; border-radius: 8px; z-index: 10; min-width: 150px; }
     </style>
 </head>
 <body>
@@ -491,209 +32,105 @@
         <h1>Race Master 3D</h1>
         <button id="singlePlayerBtn">Graj Solo</button>
         <button id="multiplayerBtn">Graj z Przyjacielem</button>
-        <button id="settingsBtn">Ustawienia</button>
     </div>
     
     <div id="multiplayerMenu" class="menu" style="display: none;">
-        <h2>Tryb Multiplayer</h2>
-        <button id="hostBtn">Stwórz Pokój</button>
+        <h2>Multiplayer P2P</h2>
+        <button id="hostBtn">Stwórz Pokój (Host)</button>
         <button id="joinBtn">Dołącz do Pokoju</button>
         <button class="backButton" id="backToMainBtn">Powrót</button>
     </div>
     
     <div id="hostRoom" class="menu" style="display: none;">
-        <h2>Tworzenie Pokoju</h2>
-        <p>Twoje ID pokoju:</p>
+        <h2>Twój Pokój</h2>
+        <p>Wyślij ten kod koledze:</p>
         <input type="text" id="roomIdDisplay" readonly>
-        <p>Udostępnij ten kod znajomemu, aby mógł dołączyć!</p>
-        <button id="startHostGameBtn">Rozpocznij Grę</button>
+        <button id="startHostGameBtn">Wybór pojazdu</button>
         <button class="backButton" id="backToMultiBtn">Powrót</button>
     </div>
     
     <div id="joinRoom" class="menu" style="display: none;">
-        <h2>Dołącz do Pokoju</h2>
-        <input type="text" id="roomIdInput" placeholder="Wpisz ID pokoju">
-        <button id="joinRoomBtn">Dołącz</button>
+        <h2>Dołącz do gry</h2>
+        <input type="text" id="roomIdInput" placeholder="Wklej ID od Hosta">
+        <button id="joinRoomBtn">Połącz</button>
         <button class="backButton" id="backToMulti2Btn">Powrót</button>
     </div>
     
     <div id="carSelection" class="menu" style="display: none;">
-        <h2>Wybierz Swój Samochób</h2>
+        <h2>Wybierz Pojazd</h2>
         <div class="carSelector">
             <div class="carOption" data-car="bmw_m5">
-                <div class="carImage" style="background-image: url('data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 50\"><rect x=\"10\" y=\"15\" width=\"80\" height=\"20\" rx=\"5\" fill=\"%230066cc\"/><circle cx=\"25\" cy=\"35\" r=\"8\" fill=\"%23333\"/><circle cx=\"75\" cy=\"35\" r=\"8\" fill=\"%23333\"/></svg>')"></div>
-                <div class="carName">BMW M5 (6B | 260 km/h)</div>
+                <div style="font-weight:bold;">BMW M4</div>
+                <div style="font-size:12px; color:#aaa; margin-top:5px;">bmw_m4.glb</div>
             </div>
             <div class="carOption" data-car="porsche_911">
-                <div class="carImage" style="background-image: url('data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 50\"><rect x=\"15\" y=\"10\" width=\"70\" height=\"25\" rx=\"10\" fill=\"%23cc0000\"/><circle cx=\"25\" cy=\"35\" r=\"8\" fill=\"%23333\"/><circle cx=\"75\" cy=\"35\" r=\"8\" fill=\"%23333\"/></svg>')"></div>
-                <div class="carName">Porsche 911 (7B | 310 km/h)</div>
+                <div style="font-weight:bold;">Porsche</div>
+                <div style="font-size:12px; color:#aaa; margin-top:5px;">porsche.glb</div>
             </div>
         </div>
-        <button id="confirmCarBtn">Potwierdź Wybór</button>
-        <button class="backButton" id="backToCarSelect">Powrót</button>
-    </div>
-    
-    <div id="mapSelection" class="menu" style="display: none;">
-        <h2>Wybierz Mapę</h2>
-        <div class="mapSelector">
-            <div class="mapOption" data-map="miasto">
-                <div class="mapImage" style="background: linear-gradient(45deg, #3498db, #2c3e50);"></div>
-                <div class="mapName">Miasto</div>
-            </div>
-        </div>
-        <button id="confirmMapBtn">Potwierdź Wybór</button>
-        <button class="backButton" id="backToMapSelect">Powrót</button>
+        <button id="confirmCarBtn">Zatwierdź i Uruchom Świat</button>
     </div>
     
     <div id="loadingScreen">
         <div class="loader"></div>
-        <div id="loadingText">Ładowanie gry...</div>
+        <div id="loadingText">Generowanie terenu proceduralnego...</div>
     </div>
-    
-    <div id="errorMessage"></div>
     
     <div id="gameContainer">
         <div id="canvasContainer"></div>
-        
         <div id="ui">
             Kamera: <span id="camMode" class="highlight">TPP</span><br>
-            Skrzynia: <span id="gearMode" class="highlight">AUTO</span><br>
             Bieg: <span id="gear" class="highlight">1</span><br>
-            RPM: <span id="rpm">1000</span> / 7800<br>
+            RPM: <span id="rpm">1000</span> / 7500<br>
             Prędkość: <span id="speed">0</span> km/h
         </div>
-        
-        <div id="popup">Zmieniono na MANUAL</div>
-        
-        <div id="instrukcja">
-            Sterowanie: <b>Strzałki / WASD</b> | Skrzynia: <b>Q</b> | Kamera: <b>C</b><br>
-            Manual: <b>LPM</b> = Bieg w dół | <b>PPM</b> = Bieg w górę
-        </div>
-        
-        <div id="playerList">
-            <div class="playerItem me">Ty (Host)</div>
-        </div>
-        
-        <div id="connectionStatus">
-            <span class="statusIndicator disconnected"></span>
-            <span>Połączono (1/4)</span>
-        </div>
-        
-        <div id="mobileControls">
-            <div id="joystickZone">
-                <div id="joystickStick"></div>
-            </div>
-            <div id="pedalsZone">
-                <div id="brakePedal" class="pedal">Hamulec</div>
-                <div id="gasPedal" class="pedal">Gaz</div>
-            </div>
-        </div>
-        
-        <button id="camBtnMobile">KAMERA (C)</button>
+        <div id="instrukcja">Sterowanie: <b>WASD / Strzałki</b> | Zmiana kamery: <b>Klawisz C</b></div>
+        <div id="playerList"><div>Gracze:</div></div>
     </div>
-    
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/DRACOLoader.js"></script>
     <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
     <script>
-        // Global variables
-        let gameState = 'menu';
-        let selectedCar = 'bmw_m5';
-        let selectedMap = 'miasto';
-        let isHost = false;
-        let roomId = '';
-        
-        // P2P Networking Variables
-        let peer = null;
-        let connections = [];
-        let remotePlayers = {}; 
-        let myPeerId = '';
-        let pendingRemotesToLoad = []; 
-        
-        // Three.js Variables
+        let gameState = 'menu', selectedCar = 'bmw_m5', isHost = false;
+        let peer = null, connections = [], remotePlayers = {}, pendingRemotes = [];
         let scene, camera, renderer, car;
-        let gltfLoader, dracoLoader;
-
-        // Physics & Controls Variables
-        let currentSpeed = 0; 
-        let turnSpeed = 0.035;
-        let currentGear = 1;
-        let isManualTransmission = false;
-        let cameraViewMode = 'TPP'; 
-        let currentRpm = 1000;
+        let gltfLoader;
         
+        let lastNetworkUpdate = 0;
+        const networkTickInterval = 40; // 25 ticków sieciowych na sekundę
+
+        // Fizyka jazdy
+        let currentSpeed = 0;
+        const maxSpeed = 1.8, acceleration = 0.015, friction = 0.008, turnSpeed = 0.04;
         const keys = { forward: false, backward: false, left: false, right: false };
-        
-        let mobileGas = false;
-        let mobileBrake = false;
-        let mobileTurnForce = 0;
+        let cameraViewMode = 'TPP';
 
-        let isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-        const mobileControlsElement = document.getElementById('mobileControls');
-        const camBtnMobileElement = document.getElementById('camBtnMobile');
-        
-        // DOM Elements
+        const carConfigs = { 'bmw_m5': { path: 'bmw_m4.glb' }, 'porsche_911': { path: 'porsche.glb' } };
+
+        // DOM
         const mainMenu = document.getElementById('mainMenu');
         const multiplayerMenu = document.getElementById('multiplayerMenu');
         const hostRoom = document.getElementById('hostRoom');
         const joinRoom = document.getElementById('joinRoom');
         const carSelection = document.getElementById('carSelection');
-        const mapSelection = document.getElementById('mapSelection');
         const loadingScreen = document.getElementById('loadingScreen');
-        const loadingText = document.getElementById('loadingText');
         const canvasContainer = document.getElementById('canvasContainer');
         const roomIdDisplay = document.getElementById('roomIdDisplay');
         const roomIdInput = document.getElementById('roomIdInput');
-        const errorMessage = document.getElementById('errorMessage');
-        
-        // UI Dashboard Elements
-        const speedDisplay = document.getElementById('speed');
-        const rpmDisplay = document.getElementById('rpm');
-        const gearDisplay = document.getElementById('gear');
-        const gearModeDisplay = document.getElementById('gearMode');
-        const camModeDisplay = document.getElementById('camMode');
-        const popupElement = document.getElementById('popup');
-        
-        const carConfigs = {
-            'bmw_m5': {
-                path: 'bmw_m4.glb',
-                maxSpeedKmh: 260,
-                maxGears: 6,
-                fppCamX: 0.25, fppCamY: 0.65, fppCamZ: -0.1
-            },
-            'porsche_911': {
-                path: 'porsche.glb',
-                maxSpeedKmh: 310,
-                maxGears: 7,
-                fppCamX: 0.22, fppCamY: 0.55, fppCamZ: 0.05
-            }
-        };
-        
-        const mapConfigs = {
-            'miasto': {
-                path: 'mapa1.glb'
-            }
-        };
-        
-        if(isMobile) {
-            if(mobileControlsElement) mobileControlsElement.style.display = 'block';
-            if(camBtnMobileElement) camBtnMobileElement.style.display = 'block';
-            initMobileControls();
-        }
-        
-        // --- INPUT HANDLING ---
+
+        // Input handler
         window.addEventListener('keydown', (e) => {
             if (gameState !== 'game') return;
             if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') keys.forward = true;
             if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') keys.backward = true;
             if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keys.left = true;
             if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.right = true;
-            
-            if (e.key === 'c' || e.key === 'C') toggleCameraView();
-            if (e.key === 'q' || e.key === 'Q') toggleTransmissionMode();
+            if (e.key === 'c' || e.key === 'C') {
+                cameraViewMode = cameraViewMode === 'TPP' ? 'FPP' : 'TPP';
+                document.getElementById('camMode').textContent = cameraViewMode;
+            }
         });
-
         window.addEventListener('keyup', (e) => {
             if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') keys.forward = false;
             if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') keys.backward = false;
@@ -701,431 +138,234 @@
             if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.right = false;
         });
 
-        window.addEventListener('mousedown', (e) => {
-            if (gameState !== 'game' || !isManualTransmission) return;
-            const config = carConfigs[selectedCar];
-            if (e.button === 0) { 
-                if (currentGear > 1) {
-                    currentGear--;
-                    triggerPopup(`Bieg: ${currentGear}`);
-                }
-            } else if (e.button === 2) { 
-                if (currentGear < config.maxGears) {
-                    currentGear++;
-                    triggerPopup(`Bieg: ${currentGear}`);
-                }
-            }
-        });
-
-        window.addEventListener('contextmenu', (e) => {
-            if (gameState === 'game') e.preventDefault();
-        });
-
-        if(camBtnMobileElement) {
-            camBtnMobileElement.addEventListener('click', toggleCameraView);
-        }
-
-        function toggleCameraView() {
-            cameraViewMode = cameraViewMode === 'TPP' ? 'FPP' : 'TPP';
-            if (camModeDisplay) camModeDisplay.textContent = cameraViewMode;
-            triggerPopup(`Widok: ${cameraViewMode}`);
-        }
-
-        function toggleTransmissionMode() {
-            isManualTransmission = !isManualTransmission;
-            if (gearModeDisplay) gearModeDisplay.textContent = isManualTransmission ? 'MANUAL' : 'AUTO';
-            triggerPopup(isManualTransmission ? 'Skrzynia: MANUAL' : 'Skrzynia: AUTO');
-        }
-
-        function triggerPopup(text) {
-            if(popupElement) {
-                popupElement.textContent = text;
-                popupElement.style.opacity = '1';
-                setTimeout(() => { popupElement.style.opacity = '0'; }, 1200);
-            }
-        }
-
-        // --- MOBILE CONTROLS ---
-        function initMobileControls() {
-            const gasPedal = document.getElementById('gasPedal');
-            const brakePedal = document.getElementById('brakePedal');
-            const joystickZone = document.getElementById('joystickZone');
-            const joystickStick = document.getElementById('joystickStick');
-
-            gasPedal.addEventListener('touchstart', (e) => { e.preventDefault(); mobileGas = true; });
-            gasPedal.addEventListener('touchend', () => mobileGas = false);
-            brakePedal.addEventListener('touchstart', (e) => { e.preventDefault(); mobileBrake = true; });
-            brakePedal.addEventListener('touchend', () => mobileBrake = false);
-
-            let joystickRect = joystickZone.getBoundingClientRect();
-            let centerX = joystickRect.left + joystickRect.width / 2;
-            let maxRadius = joystickRect.width / 2;
-
-            window.addEventListener('resize', () => {
-                joystickRect = joystickZone.getBoundingClientRect();
-                centerX = joystickRect.left + joystickRect.width / 2;
-                maxRadius = joystickRect.width / 2;
-            });
-
-            joystickZone.addEventListener('touchmove', (e) => {
-                e.preventDefault();
-                const touch = e.touches[0];
-                let deltaX = touch.clientX - centerX;
-                if (Math.abs(deltaX) > maxRadius) {
-                    deltaX = Math.sign(deltaX) * maxRadius;
-                }
-                joystickStick.style.transform = `translateX(${deltaX}px)`;
-                mobileTurnForce = deltaX / maxRadius; 
-            });
-
-            joystickZone.addEventListener('touchend', () => {
-                joystickStick.style.transform = 'translate(0px, 0px)';
-                mobileTurnForce = 0;
-            });
-        }
-        
-        // --- PEERJS NETWORKING ---
-        function initPeer(isRoomHost, targetRoomId = null) {
-            peer = new Peer();
-            
-            peer.on('open', (id) => {
-                myPeerId = id;
-                console.log('Moje ID PeerJS:', id);
-                if (isRoomHost) {
-                    roomId = id;
-                    roomIdDisplay.value = id; 
-                    updatePlayerListUI();
-                } else {
-                    connectToHost(targetRoomId);
-                }
-            });
-            
-            peer.on('error', (err) => {
-                console.error(err);
-                showError('Blad polaczenia sieciowego: ' + err.type);
-            });
-            
-            peer.on('connection', (conn) => { setupConnection(conn); });
-        }
-        
-        function connectToHost(hostId) {
-            const conn = peer.connect(hostId);
-            setupConnection(conn);
-        }
-        
-        function setupConnection(conn) {
-            connections.push(conn);
-            conn.on('open', () => {
-                updatePlayerListUI();
-                if (gameState === 'game') conn.send({ type: 'start_game', map: selectedMap });
-            });
-            conn.on('data', (data) => { handleNetworkData(data, conn.peer); });
-            conn.on('close', () => {
-                if (remotePlayers[conn.peer] && remotePlayers[conn.peer].mesh && scene) {
-                    scene.remove(remotePlayers[conn.peer].mesh);
-                }
-                delete remotePlayers[conn.peer];
-                connections = connections.filter(c => c.peer !== conn.peer);
-                updatePlayerListUI();
-            });
-        }
-        
-        function broadcast(data) {
-            connections.forEach(conn => { if (conn.open) conn.send(data); });
-        }
-        
-        function handleNetworkData(data, senderPeerId) {
-            if (data.type === 'start_game') {
-                selectedMap = data.map;
-                gameState = 'loading';
-                carSelection.style.display = 'none';
-                loadingScreen.style.display = 'flex';
-                startGame();
-            }
-            if (data.type === 'init_car') {
-                if (!scene || !gltfLoader) {
-                    pendingRemotesToLoad.push({ id: senderPeerId, carType: data.carType });
-                } else {
-                    spawnRemotePlayerCar(senderPeerId, data.carType);
-                }
-            }
-            if (data.type === 'update_position') {
-                if (remotePlayers[senderPeerId] && remotePlayers[senderPeerId].mesh) {
-                    const remoteCar = remotePlayers[senderPeerId].mesh;
-                    remoteCar.position.set(data.pos.x, data.pos.y, data.pos.z);
-                    remoteCar.rotation.set(data.rot.x, data.rot.y, data.rot.z);
-                }
-            }
-        }
-        
-        function spawnRemotePlayerCar(peerId, carType) {
-            if (remotePlayers[peerId]) return; 
-            remotePlayers[peerId] = { carType: carType, mesh: null };
-            if (gltfLoader && scene) {
-                gltfLoader.load(carConfigs[carType].path, (gltf) => {
-                    const remoteMesh = gltf.scene;
-                    remoteMesh.scale.set(0.5, 0.5, 0.5);
-                    remoteMesh.position.set(3, 0.4, 0); 
-                    remoteMesh.rotation.y = Math.PI; 
-                    scene.add(remoteMesh);
-                    remotePlayers[peerId].mesh = remoteMesh;
-                });
-            }
-        }
-        
-        function updatePlayerListUI() {
-            const playerListDiv = document.getElementById('playerList');
-            const statusIndicator = document.querySelector('.statusIndicator');
-            const connectionStatusText = document.querySelector('#connectionStatus span:last-child');
-            if (!peer) return;
-            
-            let html = `<div class="playerItem me">Ty (${isHost ? 'Host' : 'Gracz'})</div>`;
-            connections.forEach((c, index) => {
-                html += `<div class="playerItem">Gracz ${index + 2} (${c.peer.substring(0,4)})</div>`;
-            });
-            playerListDiv.innerHTML = html;
-            
-            const totalPlayers = connections.length + 1;
-            if(connectionStatusText) connectionStatusText.textContent = `Polaczono (${totalPlayers}/4)`;
-            if(statusIndicator) statusIndicator.className = totalPlayers > 1 ? "statusIndicator connected" : "statusIndicator disconnected";
-        }
-        
-        // --- MENU NAVIGATION ---
-        document.getElementById('singlePlayerBtn').addEventListener('click', () => {
-            gameState = 'carSelect'; isHost = true; mainMenu.style.display = 'none'; carSelection.style.display = 'flex';
-        });
+        // Nawigacja menu
+        document.getElementById('singlePlayerBtn').addEventListener('click', () => { gameState = 'carSelect'; isHost = true; mainMenu.style.display = 'none'; carSelection.style.display = 'flex'; });
         document.getElementById('multiplayerBtn').addEventListener('click', () => { mainMenu.style.display = 'none'; multiplayerMenu.style.display = 'flex'; });
-        document.getElementById('hostBtn').addEventListener('click', () => {
-            isHost = true; multiplayerMenu.style.display = 'none'; hostRoom.style.display = 'flex'; initPeer(true); 
-        });
+        document.getElementById('hostBtn').addEventListener('click', () => { isHost = true; multiplayerMenu.style.display = 'none'; hostRoom.style.display = 'flex'; initPeer(true); });
         document.getElementById('joinBtn').addEventListener('click', () => { multiplayerMenu.style.display = 'none'; joinRoom.style.display = 'flex'; });
-        document.getElementById('startHostGameBtn').addEventListener('click', () => { gameState = 'carSelect'; hostRoom.style.display = 'none'; carSelection.style.display = 'flex'; });
-        
+        document.getElementById('startHostGameBtn').addEventListener('click', () => { hostRoom.style.display = 'none'; carSelection.style.display = 'flex'; });
         document.getElementById('joinRoomBtn').addEventListener('click', () => {
-            const typedRoomId = roomIdInput.value.trim();
-            if (typedRoomId) {
-                isHost = false; gameState = 'carSelect'; joinRoom.style.display = 'none'; carSelection.style.display = 'flex'; initPeer(false, typedRoomId); 
-            } else { alert('Wpisz ID pokoju!'); }
+            const val = roomIdInput.value.trim();
+            if(val) { isHost = false; joinRoom.style.display = 'none'; carSelection.style.display = 'flex'; initPeer(false, val); }
         });
-        
         document.getElementById('backToMainBtn').addEventListener('click', () => { multiplayerMenu.style.display = 'none'; mainMenu.style.display = 'flex'; });
-        document.getElementById('backToMultiBtn').addEventListener('click', () => { if(peer) { peer.destroy(); peer = null; connections = []; } hostRoom.style.display = 'none'; multiplayerMenu.style.display = 'flex'; });
+        document.getElementById('backToMultiBtn').addEventListener('click', () => { hostRoom.style.display = 'none'; multiplayerMenu.style.display = 'flex'; });
         document.getElementById('backToMulti2Btn').addEventListener('click', () => { joinRoom.style.display = 'none'; multiplayerMenu.style.display = 'flex'; });
-        
-        document.querySelectorAll('.carOption').forEach(option => {
-            option.addEventListener('click', () => {
-                document.querySelectorAll('.carOption').forEach(opt => opt.classList.remove('selected'));
-                option.classList.add('selected');
-                selectedCar = option.dataset.car;
+
+        document.querySelectorAll('.carOption').forEach(opt => {
+            opt.addEventListener('click', () => {
+                document.querySelectorAll('.carOption').forEach(o => o.classList.remove('selected'));
+                opt.classList.add('selected'); selectedCar = opt.dataset.car;
             });
         });
-        
+
         document.getElementById('confirmCarBtn').addEventListener('click', () => {
-            if (isHost) {
-                gameState = 'mapSelect'; carSelection.style.display = 'none'; mapSelection.style.display = 'flex';
-            } else {
-                gameState = 'loading'; carSelection.style.display = 'none'; loadingScreen.style.display = 'flex';
-                if(loadingText) loadingText.textContent = "Oczekiwanie az Host wybierze mape...";
+            carSelection.style.display = 'none'; loadingScreen.style.display = 'flex';
+            if(!isHost) {
                 broadcast({ type: 'init_car', carType: selectedCar });
+            } else {
+                broadcast({ type: 'start_game' });
+                setTimeout(launchGame, 400);
             }
         });
-        
-        document.getElementById('backToCarSelect').addEventListener('click', () => {
-            carSelection.style.display = 'none'; if (isHost) { hostRoom.style.display = 'flex'; } else { joinRoom.style.display = 'flex'; }
-        });
-        
-        document.getElementById('confirmMapBtn').addEventListener('click', () => {
-            gameState = 'loading'; mapSelection.style.display = 'none'; loadingScreen.style.display = 'flex';
-            broadcast({ type: 'start_game', map: selectedMap });
-            setTimeout(() => { startGame(); }, 1000);
-        });
-        
-        function showError(message) {
-            errorMessage.textContent = message; errorMessage.style.display = 'block';
-            setTimeout(() => { errorMessage.style.display = 'none'; }, 5000);
+
+        // PEERJS NETWORK
+        function initPeer(hostMode, targetId = null) {
+            peer = new Peer();
+            peer.on('open', (id) => { if(hostMode) { roomIdDisplay.value = id; updateNetUI(); } else { const conn = peer.connect(targetId); handleConn(conn); } });
+            peer.on('connection', (conn) => { handleConn(conn); });
         }
-        
-        // --- GAME ENGINE & PHYSICS ---
-        function startGame() {
+
+        function handleConn(conn) {
+            connections.push(conn);
+            conn.on('open', () => { updateNetUI(); });
+            conn.on('data', (data) => {
+                if(data.type === 'start_game') { launchGame(); }
+                if(data.type === 'init_car') {
+                    if(!scene) pendingRemotes.push({ id: conn.peer, type: data.carType });
+                    else spawnRemoteCar(conn.peer, data.carType);
+                }
+                if(data.type === 'pos_update') {
+                    if(remotePlayers[conn.peer]) {
+                        remotePlayers[conn.peer].position.set(data.p.x, data.p.y, data.p.z);
+                        remotePlayers[conn.peer].rotation.set(data.r.x, data.r.y, data.r.z);
+                    }
+                }
+            });
+        }
+
+        function broadcast(msg) { connections.forEach(c => { if(c.open) c.send(msg); }); }
+        function updateNetUI() {
+            const list = document.getElementById('playerList');
+            list.innerHTML = `<div>Gracze:</div><div style="color:#ff8a00;">Ty (${isHost?'Host':'Klient'})</div>`;
+            connections.forEach((c, i) => { list.innerHTML += `<div>Gracz ${i+2}</div>`; });
+        }
+
+        // Awaryjny model pojazdu (gdyby lokalny .glb nie był podpięty)
+        function generateFallbackCar(colorHex) {
+            const carGroup = new THREE.Group();
+            const body = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.6, 3.2), new THREE.MeshStandardMaterial({ color: colorHex, roughness: 0.2 }));
+            body.position.y = 0.4; carGroup.add(body);
+            const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.5, 1.6), new THREE.MeshStandardMaterial({ color: 0x222222 }));
+            cabin.position.set(0, 0.85, -0.2); carGroup.add(cabin);
+            const wheelGeo = new THREE.CylinderGeometry(0.35, 0.35, 0.3, 12);
+            const wheelMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
+            [[-0.85, 0.35, 1], [0.85, 0.35, 1], [-0.85, 0.35, -1], [0.85, 0.35, -1]].forEach(p => {
+                const w = new THREE.Mesh(wheelGeo, wheelMat); w.rotation.z = Math.PI / 2; w.position.set(p[0], p[1], p[2]); carGroup.add(w);
+            });
+            return carGroup;
+        }
+
+        function spawnRemoteCar(id, type) {
+            if (remotePlayers[id]) return;
+            gltfLoader.load(carConfigs[type].path, 
+                (gltf) => { const mesh = gltf.scene; mesh.scale.set(0.5,0.5,0.5); scene.add(mesh); remotePlayers[id] = mesh; },
+                undefined,
+                () => { const mesh = generateFallbackCar(0x00ff00); scene.add(mesh); remotePlayers[id] = mesh; }
+            );
+        }
+
+        // --- PROCEDURALNY GENERATOR ŚWIATA 3D ---
+        function generateProceduralWorld() {
+            // 1. Podłoże terenu (Góry/Wzgórza z matematycznego szumu sinusów)
+            const terrainGeo = new THREE.PlaneGeometry(1000, 1000, 120, 120);
+            terrainGeo.rotateX(-Math.PI / 2);
+            
+            const pos = terrainGeo.attributes.position;
+            for (let i = 0; i < pos.count; i++) {
+                const x = pos.getX(i);
+                const z = pos.getZ(i);
+                
+                // Matematyczne nakładanie fal udających naturalne ukształtowanie terenu
+                let y = Math.sin(x * 0.02) * Math.cos(z * 0.02) * 12;
+                y += Math.sin(x * 0.05) * 3; // Mniejsze pagórki
+                
+                // Tworzymy płaski płaskowyż na środku świata (wokół punktu startowego 0,0), żeby auto nie startowało w powietrzu
+                const distFromCenter = Math.sqrt(x*x + z*z);
+                if (distFromCenter < 60) {
+                    y = THREE.MathUtils.lerp(0, y, (distFromCenter / 60));
+                }
+                
+                pos.setY(i, y);
+            }
+            terrainGeo.computeVertexNormals();
+            
+            // Kolorowanie terenu (Stylizowana zieleń)
+            const terrainMat = new THREE.MeshStandardMaterial({ color: 0x2e5c1e, roughness: 0.9, metalness: 0.1, flatShading: true });
+            const terrain = new THREE.Mesh(terrainGeo, terrainMat);
+            scene.add(terrain);
+
+            // 2. Proceduralna, nieskończona prosta droga do testowania prędkości
+            const roadGeo = new THREE.PlaneGeometry(12, 2000);
+            roadGeo.rotateX(-Math.PI / 2);
+            const roadMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.6 });
+            const road = new THREE.Mesh(roadGeo, roadMat);
+            road.position.set(0, 0.02, 0); // Lekko nad ziemią, by uniknąć migania tekstur (Z-fighting)
+            scene.add(road);
+
+            // Paski na drodze
+            const lineGeo = new THREE.PlaneGeometry(0.3, 2000);
+            lineGeo.rotateX(-Math.PI / 2);
+            const lineMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+            const centerLine = new THREE.Mesh(lineGeo, lineMat);
+            centerLine.position.set(0, 0.03, 0);
+            scene.add(centerLine);
+        }
+
+        // START SILNIKA 3D
+        function launchGame() {
             gameState = 'game'; loadingScreen.style.display = 'none'; canvasContainer.style.display = 'block';
-            initGame();
-        }
-        
-        function initGame() {
+            
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x87CEEB);
-            scene.fog = new THREE.FogExp2(0x87CEEB, 0.005);
+            scene.background = new THREE.Color(0xb3e5fc);
+            scene.fog = new THREE.FogExp2(0xb3e5fc, 0.002);
             
-            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1500);
-            
+            camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 2000);
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.shadowMap.enabled = true;
-            
-            canvasContainer.innerHTML = '';
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Optymalizacja pod ekrany 4K
             canvasContainer.appendChild(renderer.domElement);
             
-            scene.add(new THREE.AmbientLight(0xffffff, 0.8));
-            const dirLight = new THREE.DirectionalLight(0xffffff, 0.9);
-            dirLight.position.set(40, 100, 20);
-            dirLight.castShadow = true;
-            scene.add(dirLight);
-            
-            dracoLoader = new THREE.DRACOLoader();
-            dracoLoader.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/libs/draco/');
-            gltfLoader = new THREE.GLTFLoader();
-            gltfLoader.setDRACOLoader(dracoLoader);
-            
-            pendingRemotesToLoad.forEach(item => {
-                spawnRemotePlayerCar(item.id, item.carType);
-            });
-            pendingRemotesToLoad = [];
+            // Oświetlenie świata
+            scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+            const sunLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            sunLight.position.set(100, 200, 50);
+            scene.add(sunLight);
 
-            const carConfig = carConfigs[selectedCar];
-            gltfLoader.load(carConfig.path, (gltf) => {
-                    car = gltf.scene;
-                    car.scale.set(0.5, 0.5, 0.5);
-                    car.position.set(isHost ? -2 : 2, 0.4, 0); 
-                    car.rotation.y = Math.PI;
-                    car.castShadow = true;
-                    scene.add(car);
-                    
-                    broadcast({ type: 'init_car', carType: selectedCar });
-                    loadMap(gltfLoader);
-                },
+            // GENERUJEMY NOWY ŚWIAT Z KODU
+            generateProceduralWorld();
+
+            gltfLoader = new THREE.GLTFLoader();
+
+            // Ładowanie Auta gracza
+            gltfLoader.load(carConfigs[selectedCar].path,
+                (gltf) => { car = gltf.scene; car.scale.set(0.5, 0.5, 0.5); scene.add(car); completeInitialization(); },
                 undefined,
-                (error) => { showError(`Nie mozna zaladowac samochodu: ${error.message}`); }
+                () => { car = generateFallbackCar(0xff4444); scene.add(car); completeInitialization(); }
             );
-            
+
             window.addEventListener('resize', () => {
                 camera.aspect = window.innerWidth / window.innerHeight;
                 camera.updateProjectionMatrix();
                 renderer.setSize(window.innerWidth, window.innerHeight);
             });
+        }
+
+        function completeInitialization() {
+            broadcast({ type: 'init_car', carType: selectedCar });
+            pendingRemotes.forEach(p => spawnRemoteCar(p.id, p.type));
+            pendingRemotes = [];
+            animate(0);
+        }
+
+        function animate(currentTime) {
+            requestAnimationFrame(animate);
             
-            function animate() {
-                requestAnimationFrame(animate);
-                
-                // --- BEZPIECZNA WERYFIKACJA MODELU PRZED URUCHOMIENIEM FIZYKI (NAPRAWA BLEDÓW ISGLBUFFERATTRIBUTE) ---
-                if (car && car.children && car.children.length > 0) {
-                    const config = carConfigs[selectedCar];
-                    
-                    const maxSpeedLimitEngine = config.maxSpeedKmh / 220; 
-                    const gearRatio = currentGear / config.maxGears;
-                    const maxSpeedOnCurrentGear = maxSpeedLimitEngine * gearRatio;
-                    
-                    if (keys.forward || mobileGas) {
-                        let rpmFactor = (7800 - currentRpm) / 7800;
-                        if(rpmFactor < 0.1) rpmFactor = 0.1;
-                        
-                        currentSpeed += 0.004 * rpmFactor;
-                        if (currentSpeed > maxSpeedOnCurrentGear) currentSpeed = maxSpeedOnCurrentGear;
-                    } else if (keys.backward || mobileBrake) {
-                        currentSpeed -= 0.006;
-                        if (currentSpeed < -0.3) currentSpeed = -0.3; 
-                    } else {
-                        if (currentSpeed > 0) currentSpeed = Math.max(0, currentSpeed - 0.002);
-                        if (currentSpeed < 0) currentSpeed = Math.min(0, currentSpeed + 0.002);
-                    }
-                    
-                    let speedKmh = Math.abs(Math.round(currentSpeed * 220));
-                    
-                    if (Math.abs(currentSpeed) <= 0.005) {
-                        currentRpm = 1000; 
-                    } else {
-                        let targetRpm = 1000 + (speedKmh / (config.maxSpeedKmh * gearRatio)) * 6500;
-                        currentRpm = THREE.MathUtils.lerp(currentRpm, targetRpm, 0.1);
-                        if (currentRpm > 7800) currentRpm = 7800; 
-                    }
-                    
-                    if (!isManualTransmission && Math.abs(currentSpeed) > 0.05) {
-                        if (currentRpm >= 5000 && currentGear < config.maxGears) {
-                            currentGear++;
-                            triggerPopup(`Bieg automatyczny: ${currentGear}`);
-                        }
-                        if (currentRpm < 2000 && currentGear > 1) {
-                            currentGear--;
-                        }
-                    }
-                    
-                    if (Math.abs(currentSpeed) > 0.02) {
-                        let directionMultiplier = currentSpeed > 0 ? 1 : -1;
-                        if (keys.left) car.rotation.y += turnSpeed * directionMultiplier;
-                        if (keys.right) car.rotation.y -= turnSpeed * directionMultiplier;
-                        if (isMobile && Math.abs(mobileTurnForce) > 0.05) {
-                            car.rotation.y -= turnSpeed * mobileTurnForce * directionMultiplier;
-                        }
-                    }
-                    
-                    car.position.x += Math.sin(car.rotation.y) * currentSpeed;
-                    car.position.z += Math.cos(car.rotation.y) * currentSpeed;
-                    
-                    if (speedDisplay) speedDisplay.textContent = speedKmh;
-                    if (rpmDisplay) rpmDisplay.textContent = Math.round(currentRpm);
-                    if (gearDisplay) gearDisplay.textContent = currentSpeed < -0.01 ? "R" : currentGear;
-                    
-                    if (cameraViewMode === 'TPP') {
-                        const camOffsetZ = 12;
-                        const camOffsetY = 4.0;
-                        camera.position.x = car.position.x - Math.sin(car.rotation.y) * camOffsetZ;
-                        camera.position.z = car.position.z - Math.cos(car.rotation.y) * camOffsetZ;
-                        camera.position.y = car.position.y + camOffsetY;
-                        camera.lookAt(
-                            car.position.x + Math.sin(car.rotation.y) * 2,
-                            car.position.y + 1,
-                            car.position.z + Math.cos(car.rotation.y) * 2
-                        );
-                    } else {
-                        const forwardX = Math.sin(car.rotation.y);
-                        const forwardZ = Math.cos(car.rotation.y);
-                        const rightX = Math.sin(car.rotation.y - Math.PI / 2);
-                        const rightZ = Math.cos(car.rotation.y - Math.PI / 2);
-                        
-                        camera.position.x = car.position.x + (rightX * config.fppCamX) + (forwardX * config.fppCamZ);
-                        camera.position.y = car.position.y + config.fppCamY;
-                        camera.position.z = car.position.z + (rightZ * config.fppCamX) + (forwardZ * config.fppCamZ);
-                        
-                        camera.lookAt(
-                            camera.position.x + forwardX * 10,
-                            camera.position.y - 0.1,
-                            camera.position.z + forwardZ * 10
-                        );
-                    }
-                    
-                    broadcast({
-                        type: 'update_position',
-                        pos: { x: car.position.x, y: car.position.y, z: car.position.z },
-                        rot: { x: car.rotation.x, y: car.rotation.y, z: car.rotation.z }
-                    });
+            if (car) {
+                // Fizyka przyspieszania i hamowania
+                if (keys.forward) currentSpeed = THREE.MathUtils.lerp(currentSpeed, maxSpeed, acceleration);
+                else if (keys.backward) currentSpeed = THREE.MathUtils.lerp(currentSpeed, -maxSpeed/2, acceleration*1.5);
+                else currentSpeed = THREE.MathUtils.lerp(currentSpeed, 0, friction);
+
+                // Skręcanie pojazdu
+                if (Math.abs(currentSpeed) > 0.01) {
+                    const directionModifier = currentSpeed > 0 ? 1 : -1;
+                    if (keys.left) car.rotation.y += turnSpeed * directionModifier;
+                    if (keys.right) car.rotation.y -= turnSpeed * directionModifier;
                 }
-                
-                // Try/catch blok blokujący crashe Three.js podczas ładowania asynchronicznych BufferAttributes
-                if (renderer && scene && camera) {
-                    try {
-                        renderer.render(scene, camera);
-                    } catch(err) {
-                        // Ciche ignorowanie klatek, w których asynchroniczne meshe nie zostały spięte poprawnie z WebGL
-                    }
+
+                // Aktualizacja pozycji
+                car.position.x += Math.sin(car.rotation.y) * currentSpeed;
+                car.position.z += Math.cos(car.rotation.y) * currentSpeed;
+
+                // Liczniki w UI na ekranie
+                let speedKmh = Math.round(Math.abs(currentSpeed) * 140);
+                document.getElementById('speed').textContent = speedKmh;
+                document.getElementById('rpm').textContent = 1000 + Math.round(speedKmh * 35);
+                document.getElementById('gear').textContent = currentSpeed < -0.05 ? "R" : Math.max(1, Math.min(6, Math.floor(speedKmh/35)+1));
+
+                // Kamera
+                if (cameraViewMode === 'TPP') {
+                    camera.position.set(car.position.x - Math.sin(car.rotation.y) * 8, car.position.y + 3.0, car.position.z - Math.cos(car.rotation.y) * 8);
+                    camera.lookAt(car.position.x, car.position.y + 0.6, car.position.z);
+                } else {
+                    camera.position.set(car.position.x, car.position.y + 1.2, car.position.z);
+                    camera.lookAt(car.position.x + Math.sin(car.rotation.y) * 10, car.position.y + 1.0, car.position.z + Math.cos(car.rotation.y) * 10);
+                }
+
+                // Ograniczenie wysyłania pakietów sieciowych (Tickrate), by nie zapchać przeglądarki
+                if (currentTime - lastNetworkUpdate > networkTickInterval) {
+                    broadcast({ type: 'pos_update', p: car.position, r: car.rotation });
+                    lastNetworkUpdate = currentTime;
                 }
             }
-            animate();
+
+            if (renderer && scene && camera) {
+                renderer.render(scene, camera);
+            }
         }
-        
-        function loadMap(loader) {
-            loader.load(mapConfigs[selectedMap].path, (gltf) => {
-                    const map = gltf.scene;
-                    map.scale.set(1, 1, 1);
-                    map.position.y = 0;
-                    map.receiveShadow = true;
-                    scene.add(map);
-                },
-                undefined,
-                (error) => { showError(`Nie mozna zaladowac mapy: ${error.message}`); }
-            );
-        }
-        
+
         document.querySelector('.carOption[data-car="bmw_m5"]').classList.add('selected');
-        document.querySelector('.mapOption[data-map="miasto"]').classList.add('selected');
     </script>
 </body>
 </html>
