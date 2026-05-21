@@ -3,19 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Car Game 3D</title>
+    <title>Gra 3D - Multiplayer P2P z Lokalnymi Plikami</title>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
         
         body {
             overflow: hidden;
             background: linear-gradient(135deg, #1a2a6c, #b21f1f, #1a2a6c);
             height: 100vh;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
             color: white;
         }
         
@@ -31,8 +34,232 @@
             left: 0;
             width: 100%;
             height: 100%;
+            display: none;
         }
         
+        canvas {
+            display: block;
+        }
+        
+        /* MENU STYLES */
+        .menu {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.85);
+            z-index: 100;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .menu h1 {
+            font-size: 3.5rem;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            background: linear-gradient(to right, #ff8a00, #e52e71);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 10px rgba(255, 138, 0, 0.5);
+        }
+        
+        .menu h2 {
+            font-size: 2.5rem;
+            margin: 20px 0;
+            color: #ff8a00;
+        }
+        
+        .menu button {
+            background: linear-gradient(45deg, #ff8a00, #e52e71);
+            border: none;
+            padding: 15px 40px;
+            margin: 15px 0;
+            font-size: 1.4rem;
+            color: white;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            width: 300px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: bold;
+        }
+        
+        .menu button:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+            background: linear-gradient(45deg, #ff9a3d, #ec407a);
+        }
+        
+        .menu input {
+            padding: 15px;
+            width: 300px;
+            margin: 15px 0;
+            font-size: 1.2rem;
+            border: 2px solid #ff8a00;
+            border-radius: 50px;
+            background: rgba(0, 0, 0, 0.5);
+            color: white;
+            text-align: center;
+        }
+        
+        .menu input::placeholder {
+            color: #aaa;
+        }
+        
+        .backButton {
+            background: rgba(255, 255, 255, 0.1) !important;
+            border: 1px solid #ff8a00 !important;
+            margin-top: 30px;
+        }
+        
+        /* CAR SELECTOR */
+        .carSelector {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+            margin: 20px 0;
+            max-width: 800px;
+        }
+        
+        .carOption {
+            width: 200px;
+            height: 150px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+            overflow: hidden;
+        }
+        
+        .carOption:hover {
+            transform: scale(1.05);
+            border-color: #ff8a00;
+            box-shadow: 0 0 20px rgba(255, 138, 0, 0.5);
+        }
+        
+        .carOption.selected {
+            border-color: #e52e71;
+            background: rgba(229, 46, 113, 0.2);
+            box-shadow: 0 0 20px rgba(229, 46, 113, 0.5);
+        }
+        
+        .carImage {
+            width: 100%;
+            height: 100px;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+        }
+        
+        .carName {
+            margin-top: 10px;
+            font-size: 1.1rem;
+            font-weight: bold;
+        }
+        
+        /* MAP SELECTOR */
+        .mapSelector {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+            margin: 20px 0;
+            max-width: 800px;
+        }
+        
+        .mapOption {
+            width: 200px;
+            height: 150px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+            overflow: hidden;
+        }
+        
+        .mapOption:hover {
+            transform: scale(1.05);
+            border-color: #ff8a00;
+            box-shadow: 0 0 20px rgba(255, 138, 0, 0.5);
+        }
+        
+        .mapOption.selected {
+            border-color: #e52e71;
+            background: rgba(229, 46, 113, 0.2);
+            box-shadow: 0 0 20px rgba(229, 46, 113, 0.5);
+        }
+        
+        .mapImage {
+            width: 100%;
+            height: 100px;
+            background-size: cover;
+            background-repeat: no-repeat;
+            background-position: center;
+        }
+        
+        .mapName {
+            margin-top: 10px;
+            font-size: 1.1rem;
+            font-weight: bold;
+        }
+        
+        /* LOADING SCREEN */
+        #loadingScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 200;
+            display: none;
+        }
+        
+        .loader {
+            width: 80px;
+            height: 80px;
+            border: 8px solid rgba(255, 255, 255, 0.1);
+            border-top: 8px solid #ff8a00;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 30px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        #loadingText {
+            font-size: 1.5rem;
+            text-align: center;
+            max-width: 80%;
+        }
+        
+        /* GAME UI */
         #ui {
             position: absolute;
             top: 20px;
@@ -49,54 +276,45 @@
             z-index: 10;
         }
         
-        #controls {
+        #popup {
+            position: absolute;
+            top: 25%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #fff;
+            background: rgba(255, 69, 0, 0.85);
+            padding: 15px 30px;
+            font-size: 24px;
+            font-weight: bold;
+            border-radius: 30px;
+            text-transform: uppercase;
+            box-shadow: 0 0 15px rgba(0,0,0,0.5);
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s ease-in-out;
+            z-index: 10;
+        }
+        
+        #instrukcja {
             position: absolute;
             bottom: 20px;
-            left: 20px;
-            background: rgba(0,0,0,0.7);
-            padding: 15px;
-            border-radius: 8px;
+            left: 50%;
+            transform: translateX(-50%);
             color: white;
-            font-weight: bold;
+            background: rgba(0,0,0,0.6);
+            padding: 10px 20px;
+            border-radius: 10px;
+            pointer-events: none;
+            text-align: center;
+            font-size: 14px;
             z-index: 10;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-        }
-        
-        #specialControls {
-            position: absolute;
-            bottom: 20px;
-            right: 20px;
-            background: rgba(0,0,0,0.7);
-            padding: 15px;
-            border-radius: 8px;
-            color: white;
-            font-weight: bold;
-            z-index: 10;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-        }
-        
-        button {
-            background: linear-gradient(45deg, #ff8a00, #e52e71);
-            border: none;
-            padding: 10px 15px;
-            margin: 5px;
-            border-radius: 5px;
-            color: white;
-            font-weight: bold;
-            cursor: pointer;
-            display: block;
-            width: 100%;
-            margin-bottom: 10px;
-        }
-        
-        button:hover {
-            background: linear-gradient(45deg, #ff9a3d, #ec407a);
         }
         
         .highlight {
             color: #ff8a00;
         }
         
+        /* MOBILE CONTROLS */
         #mobileControls {
             display: none;
             position: absolute;
@@ -188,27 +406,177 @@
             z-index: 30;
             display: none;
         }
+        
+        /* PLAYER LIST */
+        #playerList {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.7);
+            padding: 15px;
+            border-radius: 8px;
+            color: white;
+            font-weight: bold;
+            z-index: 10;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            min-width: 200px;
+        }
+        
+        .playerItem {
+            padding: 5px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+        }
+        
+        .playerItem:last-child {
+            border-bottom: none;
+        }
+        
+        .playerItem.me {
+            color: #ff8a00;
+        }
+        
+        /* CONNECTION STATUS */
+        #connectionStatus {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.7);
+            padding: 10px 15px;
+            border-radius: 8px;
+            color: white;
+            font-weight: bold;
+            z-index: 10;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        }
+        
+        .statusIndicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .connected {
+            background: #4caf50;
+        }
+        
+        .disconnected {
+            background: #f44336;
+        }
+        
+        /* ERROR MESSAGE */
+        #errorMessage {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+            color: white;
+            font-weight: bold;
+            text-align: center;
+            z-index: 1000;
+            display: none;
+            max-width: 80%;
+        }
     </style>
 </head>
 <body>
+    <div id="mainMenu" class="menu">
+        <h1>Race Master 3D</h1>
+        <button id="singlePlayerBtn">Graj Solo</button>
+        <button id="multiplayerBtn">Graj z Przyjacielem</button>
+        <button id="settingsBtn">Ustawienia</button>
+    </div>
+    
+    <div id="multiplayerMenu" class="menu" style="display: none;">
+        <h2>Tryb Multiplayer</h2>
+        <button id="hostBtn">Stwórz Pokój</button>
+        <button id="joinBtn">Dołącz do Pokoju</button>
+        <button class="backButton" id="backToMainBtn">Powrót</button>
+    </div>
+    
+    <div id="hostRoom" class="menu" style="display: none;">
+        <h2>Tworzenie Pokoju</h2>
+        <p>Twoje ID pokoju:</p>
+        <input type="text" id="roomIdDisplay" readonly>
+        <p>Udostępnij ten kod znajomemu, aby mógł dołączyć!</p>
+        <button id="startHostGameBtn">Rozpocznij Grę</button>
+        <button class="backButton" id="backToMultiBtn">Powrót</button>
+    </div>
+    
+    <div id="joinRoom" class="menu" style="display: none;">
+        <h2>Dołącz do Pokoju</h2>
+        <input type="text" id="roomIdInput" placeholder="Wpisz ID pokoju">
+        <button id="joinRoomBtn">Dołącz</button>
+        <button class="backButton" id="backToMulti2Btn">Powrót</button>
+    </div>
+    
+    <div id="carSelection" class="menu" style="display: none;">
+        <h2>Wybierz Swój Samochód</h2>
+        <div class="carSelector">
+            <div class="carOption" data-car="bmw_m5">
+                <div class="carImage" style="background-image: url('data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 50\"><rect x=\"10\" y=\"15\" width=\"80\" height=\"20\" rx=\"5\" fill=\"%230066cc\"/><circle cx=\"25\" cy=\"35\" r=\"8\" fill=\"%23333\"/><circle cx=\"75\" cy=\"35\" r=\"8\" fill=\"%23333\"/></svg>')"></div>
+                <div class="carName">BMW M5</div>
+            </div>
+            <div class="carOption" data-car="porsche_911">
+                <div class="carImage" style="background-image: url('data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 50\"><rect x=\"15\" y=\"10\" width=\"70\" height=\"25\" rx=\"10\" fill=\"%23cc0000\"/><circle cx=\"25\" cy=\"35\" r=\"8\" fill=\"%23333\"/><circle cx=\"75\" cy=\"35\" r=\"8\" fill=\"%23333\"/></svg>')"></div>
+                <div class="carName">Porsche 911</div>
+            </div>
+        </div>
+        <button id="confirmCarBtn">Potwierdź Wybór</button>
+        <button class="backButton" id="backToCarSelect">Powrót</button>
+    </div>
+    
+    <div id="mapSelection" class="menu" style="display: none;">
+        <h2>Wybierz Mapę</h2>
+        <div class="mapSelector">
+            <div class="mapOption" data-map="miasto">
+                <div class="mapImage" style="background: linear-gradient(45deg, #3498db, #2c3e50);"></div>
+                <div class="mapName">Miasto</div>
+            </div>
+        </div>
+        <button id="confirmMapBtn">Potwierdź Wybór</button>
+        <button class="backButton" id="backToMapSelect">Powrót</button>
+    </div>
+    
+    <div id="loadingScreen">
+        <div class="loader"></div>
+        <div id="loadingText">Ładowanie gry...</div>
+    </div>
+    
+    <div id="errorMessage"></div>
+    
     <div id="gameContainer">
-        <div id="canvasContainer"></div>
+        <div id="canvasContainer">
+            </div>
         
         <div id="ui">
             Kamera: <span id="camMode" class="highlight">TPP</span><br>
-            Prędkość: <span id="speed">0</span> km/h<br>
-            Kierunek: <span id="direction">0</span>°
+            Skrzynia: <span id="gearMode" class="highlight">AUTO</span><br>
+            Bieg: <span id="gear" class="highlight">1</span><br>
+            RPM: <span id="rpm">1000</span> / 7800<br>
+            Prędkość: <span id="speed">0</span> km/h
         </div>
         
-        <div id="controls">
-            <div>Sterowanie: Strzałki / WASD</div>
-            <div>Kamera: C | Reset: R</div>
+        <div id="popup">Zmieniono na MANUAL</div>
+        
+        <div id="instrukcja">
+            Sterowanie: <b>Strzałki / WASD</b> | Skrzynia: <b>Q</b> | Kamera: <b>C</b><br>
+            Manual: <b>LPM</b> = Bieg w dół | <b>PPM</b> = Bieg w górę
         </div>
         
-        <div id="specialControls">
-            <button id="flipCarBtn">Odwróć auto</button>
-            <button id="rotate180Btn">Obróć 180°</button>
-            <button id="resetPositionBtn">Reset pozycji</button>
+        <div id="playerList">
+            <div class="playerItem me">Ty (Host)</div>
+            <div class="playerItem">Gracz 2</div>
+            <div class="playerItem">Gracz 3</div>
+        </div>
+        
+        <div id="connectionStatus">
+            <span class="statusIndicator connected"></span>
+            <span>Połączono (3/4)</span>
         </div>
         
         <div id="mobileControls">
@@ -225,21 +593,189 @@
     </div>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/DRACOLoader.js"></script>
+    <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
     <script>
         // Global variables
-        let scene, camera, renderer, car;
-        let keys = {};
-        let mobileGas = false;
-        let mobileBrake = false;
-        let mobileSteerX = 0;
-        let speed = 0;
-        let carRotation = Math.PI; // Ustawiamy początkowy obrót o 180°
-        let steerInput = 0;
-        const friction = 0.0015;
-        let cameraMode = 'tpp';
+        let gameState = 'menu'; // menu, carSelect, mapSelect, loading, game
+        let selectedCar = 'bmw_m5';
+        let selectedMap = 'miasto';
+        let isHost = false;
+        let roomId = '';
+        let peer = null;
+        let connections = [];
+        let scene, camera, renderer, car, road;
         
-        // Initialize the game
-        function init() {
+        // DOM Elements
+        const mainMenu = document.getElementById('mainMenu');
+        const multiplayerMenu = document.getElementById('multiplayerMenu');
+        const hostRoom = document.getElementById('hostRoom');
+        const joinRoom = document.getElementById('joinRoom');
+        const carSelection = document.getElementById('carSelection');
+        const mapSelection = document.getElementById('mapSelection');
+        const loadingScreen = document.getElementById('loadingScreen');
+        const canvasContainer = document.getElementById('canvasContainer');
+        const roomIdDisplay = document.getElementById('roomIdDisplay');
+        const roomIdInput = document.getElementById('roomIdInput');
+        const errorMessage = document.getElementById('errorMessage');
+        
+        // Car configurations
+        const carConfigs = {
+            'bmw_m5': {
+                path: 'bmw_m4.glb',
+                pivotOffsetX: 0,
+                pivotOffsetZ: 0,
+                fppCamX: 0.6,
+                fppCamY: 1.8,
+                fppCamZ: 0.5
+            },
+            'porsche_911': {
+                path: 'porsche.glb',
+                pivotOffsetX: 0,
+                pivotOffsetZ: 0,
+                fppCamX: 0.5,
+                fppCamY: 1.4,
+                fppCamZ: 0.2
+            }
+        };
+        
+        // Map configurations
+        const mapConfigs = {
+            'miasto': {
+                path: 'C:/Users/Hubert/Downloads/mapy/mapa1.glb'
+            }
+        };
+        
+        // Menu Navigation
+        document.getElementById('singlePlayerBtn').addEventListener('click', () => {
+            gameState = 'carSelect';
+            mainMenu.style.display = 'none';
+            carSelection.style.display = 'flex';
+        });
+        
+        document.getElementById('multiplayerBtn').addEventListener('click', () => {
+            mainMenu.style.display = 'none';
+            multiplayerMenu.style.display = 'flex';
+        });
+        
+        document.getElementById('hostBtn').addEventListener('click', () => {
+            isHost = true;
+            roomId = generateRoomId();
+            roomIdDisplay.value = roomId;
+            multiplayerMenu.style.display = 'none';
+            hostRoom.style.display = 'flex';
+        });
+        
+        document.getElementById('joinBtn').addEventListener('click', () => {
+            multiplayerMenu.style.display = 'none';
+            joinRoom.style.display = 'flex';
+        });
+        
+        document.getElementById('backToMainBtn').addEventListener('click', () => {
+            multiplayerMenu.style.display = 'none';
+            mainMenu.style.display = 'flex';
+        });
+        
+        document.getElementById('backToMultiBtn').addEventListener('click', () => {
+            hostRoom.style.display = 'none';
+            multiplayerMenu.style.display = 'flex';
+        });
+        
+        document.getElementById('backToMulti2Btn').addEventListener('click', () => {
+            joinRoom.style.display = 'none';
+            multiplayerMenu.style.display = 'flex';
+        });
+        
+        document.getElementById('startHostGameBtn').addEventListener('click', () => {
+            gameState = 'carSelect';
+            hostRoom.style.display = 'none';
+            carSelection.style.display = 'flex';
+        });
+        
+        document.getElementById('joinRoomBtn').addEventListener('click', () => {
+            const roomId = roomIdInput.value.trim();
+            if (roomId) {
+                // Simulate joining room
+                gameState = 'carSelect';
+                joinRoom.style.display = 'none';
+                carSelection.style.display = 'flex';
+            }
+        });
+        
+        // Car Selection
+        document.querySelectorAll('.carOption').forEach(option => {
+            option.addEventListener('click', () => {
+                document.querySelectorAll('.carOption').forEach(opt => opt.classList.remove('selected'));
+                option.classList.add('selected');
+                selectedCar = option.dataset.car;
+            });
+        });
+        
+        document.getElementById('confirmCarBtn').addEventListener('click', () => {
+            gameState = 'mapSelect';
+            carSelection.style.display = 'none';
+            mapSelection.style.display = 'flex';
+        });
+        
+        document.getElementById('backToCarSelect').addEventListener('click', () => {
+            carSelection.style.display = 'none';
+            if (isHost) {
+                hostRoom.style.display = 'flex';
+            } else {
+                joinRoom.style.display = 'flex';
+            }
+        });
+        
+        // Map Selection
+        document.querySelectorAll('.mapOption').forEach(option => {
+            option.addEventListener('click', () => {
+                document.querySelectorAll('.mapOption').forEach(opt => opt.classList.remove('selected'));
+                option.classList.add('selected');
+                selectedMap = option.dataset.map;
+            });
+        });
+        
+        document.getElementById('confirmMapBtn').addEventListener('click', () => {
+            gameState = 'loading';
+            mapSelection.style.display = 'none';
+            loadingScreen.style.display = 'flex';
+            
+            // Simulate loading
+            setTimeout(() => {
+                startGame();
+            }, 2000);
+        });
+        
+        document.getElementById('backToMapSelect').addEventListener('click', () => {
+            mapSelection.style.display = 'none';
+            carSelection.style.display = 'flex';
+        });
+        
+        // Helper Functions
+        function generateRoomId() {
+            return Math.random().toString(36).substring(2, 8).toUpperCase();
+        }
+        
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.style.display = 'block';
+            setTimeout(() => {
+                errorMessage.style.display = 'none';
+            }, 5000);
+        }
+        
+        function startGame() {
+            gameState = 'game';
+            loadingScreen.style.display = 'none';
+            canvasContainer.style.display = 'block';
+            
+            // Initialize Three.js scene
+            initGame();
+        }
+        
+        // Game Initialization
+        function initGame() {
             // Create scene
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0x87CEEB);
@@ -247,13 +783,12 @@
             
             // Create camera
             camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1500);
-            camera.position.set(0, 5, 10);
             
             // Create renderer
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.shadowMap.enabled = true;
-            document.getElementById('canvasContainer').appendChild(renderer.domElement);
+            canvasContainer.appendChild(renderer.domElement);
             
             // Add lights
             const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
@@ -264,288 +799,93 @@
             dirLight.castShadow = true;
             scene.add(dirLight);
             
-            // Create ground
-            const groundGeometry = new THREE.PlaneGeometry(1000, 1000);
-            const groundMaterial = new THREE.MeshStandardMaterial({ color: 0x2E8B57 });
-            const ground = new THREE.Mesh(groundGeometry, groundMaterial);
-            ground.rotation.x = -Math.PI / 2;
-            ground.receiveShadow = true;
-            scene.add(ground);
+            // Setup loaders
+            const dracoLoader = new THREE.DRACOLoader();
+            dracoLoader.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/libs/draco/');
             
-            // Create road
-            const roadGeometry = new THREE.PlaneGeometry(15, 1000);
-            const roadMaterial = new THREE.MeshStandardMaterial({ color: 0x333333 });
-            const road = new THREE.Mesh(roadGeometry, roadMaterial);
-            road.rotation.x = -Math.PI / 2;
-            road.position.y = 0.01;
-            road.receiveShadow = true;
-            scene.add(road);
+            const loader = new THREE.GLTFLoader();
+            loader.setDRACOLoader(dracoLoader);
             
-            // Create car
-            const carGeometry = new THREE.BoxGeometry(2, 1, 4);
-            const carMaterial = new THREE.MeshPhongMaterial({ color: 0x0066cc });
-            car = new THREE.Mesh(carGeometry, carMaterial);
-            car.position.y = 0.5;
-            car.rotation.y = carRotation; // Ustawiamy początkowy obrót
-            car.castShadow = true;
-            scene.add(car);
-            
-            // Add wheels
-            const wheelGeometry = new THREE.CylinderGeometry(0.5, 0.5, 0.2, 16);
-            wheelGeometry.rotateZ(Math.PI / 2);
-            const wheelMaterial = new THREE.MeshPhongMaterial({ color: 0x333333 });
-            
-            const frontLeftWheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
-            frontLeftWheel.position.set(1, 0.5, 1.5);
-            scene.add(frontLeftWheel);
-            
-            const frontRightWheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
-            frontRightWheel.position.set(-1, 0.5, 1.5);
-            scene.add(frontRightWheel);
-            
-            const rearLeftWheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
-            rearLeftWheel.position.set(1, 0.5, -1.5);
-            scene.add(rearLeftWheel);
-            
-            const rearRightWheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
-            rearRightWheel.position.set(-1, 0.5, -1.5);
-            scene.add(rearRightWheel);
-            
-            // Add trees
-            for (let i = 0; i < 50; i++) {
-                const treeTrunkGeometry = new THREE.CylinderGeometry(0.2, 0.2, 2, 8);
-                const treeTrunkMaterial = new THREE.MeshPhongMaterial({ color: 0x8B4513 });
-                const treeTrunk = new THREE.Mesh(treeTrunkGeometry, treeTrunkMaterial);
-                treeTrunk.position.set(
-                    Math.random() * 100 - 50,
-                    1,
-                    Math.random() * 1000 - 500
-                );
-                treeTrunk.castShadow = true;
-                scene.add(treeTrunk);
-                
-                const treeLeavesGeometry = new THREE.SphereGeometry(1.5, 8, 8);
-                const treeLeavesMaterial = new THREE.MeshPhongMaterial({ color: 0x228B22 });
-                const treeLeaves = new THREE.Mesh(treeLeavesGeometry, treeLeavesMaterial);
-                treeLeaves.position.set(
-                    treeTrunk.position.x,
-                    treeTrunk.position.y + 2,
-                    treeTrunk.position.z
-                );
-                treeLeaves.castShadow = true;
-                scene.add(treeLeaves);
-            }
-            
-            // Setup event listeners
-            setupEventListeners();
+            // Load car model
+            const carConfig = carConfigs[selectedCar];
+            loader.load(
+                carConfig.path,
+                (gltf) => {
+                    car = gltf.scene;
+                    car.scale.set(0.5, 0.5, 0.5);
+                    car.position.y = 0.5;
+                    
+                    // Obrót modelu o 180 stopni, aby przód auta był skierowany prawidłowo w stronę osi -Z (w głąb ekranu)
+                    car.rotation.y = Math.PI; 
+                    
+                    car.castShadow = true;
+                    scene.add(car);
+                    
+                    // Ustawienie początkowej pozycji kamery bezpośrednio ZA samochodem
+                    camera.position.set(car.position.x, car.position.y + 4, car.position.z + 12);
+                    
+                    // Load map after car is loaded
+                    loadMap(loader);
+                },
+                undefined,
+                (error) => {
+                    console.error('Błąd ładowania samochodu:', error);
+                    showError(`Nie można załadować samochodu: ${error.message}`);
+                }
+            );
             
             // Handle window resize
-            window.addEventListener('resize', onWindowResize);
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
             
-            // Start animation loop
+            // Animation loop
+            function animate() {
+                requestAnimationFrame(animate);
+                
+                if (car) {
+                    // Zmiana znaku na ujemny (-=) powoduje ruch auta w stronę przodu, w głąb mapy
+                    car.position.z -= 0.15;
+                    
+                    // Aktualizacja kamery podążającej dokładnie ZA pojazdem (auto jedzie od nas, kamera widzi tył)
+                    camera.position.x = car.position.x;
+                    camera.position.y = car.position.y + 3.5;
+                    camera.position.z = car.position.z + 10; // +10 jednostek z tyłu za współrzędną Z auta
+                    
+                    // Kamera patrzy lekko ponad punkt centralny samochodu
+                    camera.lookAt(car.position.x, car.position.y + 1.0, car.position.z);
+                }
+                
+                renderer.render(scene, camera);
+            }
+            
             animate();
         }
         
-        function setupEventListeners() {
-            // Keyboard events
-            window.addEventListener('keydown', (e) => {
-                keys[e.key.toLowerCase()] = true;
-                
-                // Camera toggle
-                if (e.key.toLowerCase() === 'c') {
-                    toggleCamera();
+        function loadMap(loader) {
+            const mapConfig = mapConfigs[selectedMap];
+            loader.load(
+                mapConfig.path,
+                (gltf) => {
+                    const map = gltf.scene;
+                    map.scale.set(1, 1, 1);
+                    map.position.y = 0;
+                    map.receiveShadow = true;
+                    scene.add(map);
+                },
+                undefined,
+                (error) => {
+                    console.error('Błąd ładowania mapy:', error);
+                    showError(`Nie można załadować mapy: ${error.message}`);
                 }
-                
-                // Reset position
-                if (e.key.toLowerCase() === 'r') {
-                    resetCarPosition();
-                }
-            });
-            
-            window.addEventListener('keyup', (e) => {
-                keys[e.key.toLowerCase()] = false;
-            });
-            
-            // Special controls buttons
-            document.getElementById('flipCarBtn').addEventListener('click', flipCar);
-            document.getElementById('rotate180Btn').addEventListener('click', rotate180);
-            document.getElementById('resetPositionBtn').addEventListener('click', resetCarPosition);
-            
-            // Mobile controls
-            const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-            if (isMobile) {
-                document.getElementById('mobileControls').style.display = 'block';
-                document.getElementById('camBtnMobile').style.display = 'block';
-                
-                // Gas pedal
-                const gasPedal = document.getElementById('gasPedal');
-                gasPedal.addEventListener('touchstart', (e) => {
-                    e.preventDefault();
-                    mobileGas = true;
-                });
-                gasPedal.addEventListener('touchend', (e) => {
-                    e.preventDefault();
-                    mobileGas = false;
-                });
-                
-                // Brake pedal
-                const brakePedal = document.getElementById('brakePedal');
-                brakePedal.addEventListener('touchstart', (e) => {
-                    e.preventDefault();
-                    mobileBrake = true;
-                });
-                brakePedal.addEventListener('touchend', (e) => {
-                    e.preventDefault();
-                    mobileBrake = false;
-                });
-                
-                // Camera button
-                document.getElementById('camBtnMobile').addEventListener('touchstart', (e) => {
-                    e.preventDefault();
-                    toggleCamera();
-                });
-                
-                // Joystick
-                const joyZone = document.getElementById('joystickZone');
-                const joyStick = document.getElementById('joystickStick');
-                const joyRadius = 65;
-                
-                function handleJoystick(e) {
-                    e.preventDefault();
-                    const touch = e.touches[0];
-                    const rect = joyZone.getBoundingClientRect();
-                    const centerX = rect.left + rect.width / 2;
-                    
-                    let deltaX = touch.clientX - centerX;
-                    deltaX = Math.max(-joyRadius, Math.min(joyRadius, deltaX));
-                    
-                    joyStick.style.transform = `translateX(${deltaX}px)`;
-                    mobileSteerX = -deltaX / joyRadius;
-                }
-                
-                joyZone.addEventListener('touchstart', handleJoystick);
-                joyZone.addEventListener('touchmove', handleJoystick);
-                joyZone.addEventListener('touchend', (e) => {
-                    e.preventDefault();
-                    joyStick.style.transform = `translateX(0px)`;
-                    mobileSteerX = 0;
-                });
-            }
+            );
         }
         
-        function toggleCamera() {
-            cameraMode = cameraMode === 'tpp' ? 'fpp' : 'tpp';
-            document.getElementById('camMode').innerText = cameraMode.toUpperCase();
-        }
-        
-        function flipCar() {
-            // Odwracamy auto w osi X
-            car.rotation.x = car.rotation.x === 0 ? Math.PI : 0;
-        }
-        
-        function rotate180() {
-            // Obracamy auto o 180 stopni
-            carRotation += Math.PI;
-            car.rotation.y = carRotation;
-        }
-        
-        function resetCarPosition() {
-            car.position.set(0, 0.5, 0);
-            carRotation = Math.PI; // Ustawiamy obrót zgodnie z kierunkiem jazdy
-            car.rotation.set(0, carRotation, 0);
-            speed = 0;
-        }
-        
-        function onWindowResize() {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        }
-        
-        function updateUI() {
-            document.getElementById('speed').innerText = Math.abs(Math.round(speed * 100));
-            document.getElementById('direction').innerText = Math.round(carRotation * 180 / Math.PI) % 360;
-            document.getElementById('posX').innerText = car.position.x.toFixed(1);
-            document.getElementById('posZ').innerText = car.position.z.toFixed(1);
-        }
-        
-        function animate() {
-            requestAnimationFrame(animate);
-            
-            // Handle input
-            let isAccelerating = keys['w'] || keys['arrowup'] || mobileGas;
-            let isBraking = keys['s'] || keys['arrowdown'] || mobileBrake;
-            
-            // Update speed
-            if (isAccelerating) {
-                speed = Math.min(speed + 0.005, 0.5);
-            } else if (isBraking) {
-                speed = Math.max(speed - 0.01, -0.3);
-            } else {
-                if (speed > 0) {
-                    speed = Math.max(0, speed - friction);
-                } else if (speed < 0) {
-                    speed = Math.min(0, speed + friction);
-                }
-            }
-            
-            // Handle steering
-            let targetSteer = 0;
-            if (isMobile) {
-                targetSteer = mobileSteerX;
-            } else {
-                if (keys['a'] || keys['arrowleft']) targetSteer = 1;
-                if (keys['d'] || keys['arrowright']) targetSteer = -1;
-            }
-            
-            // Apply steering
-            if (targetSteer !== 0) {
-                steerInput = THREE.MathUtils.clamp(steerInput + targetSteer * 0.07, -1, 1);
-            } else {
-                steerInput *= 0.80;
-                if (Math.abs(steerInput) < 0.01) steerInput = 0;
-            }
-            
-            // Apply steering to rotation
-            let absSpeed = Math.abs(speed);
-            if (absSpeed > 0.005) {
-                let speedSensitivity = 1.0 / (1.0 + absSpeed * 5.0);
-                let turnAmount = steerInput * 0.040 * speedSensitivity * speed;
-                carRotation += turnAmount * (speed > 0 ? 1 : -1);
-            }
-            
-            // Update car position and rotation
-            car.position.x += Math.sin(carRotation) * speed;
-            car.position.z += Math.cos(carRotation) * speed;
-            car.rotation.y = carRotation;
-            
-            // Update camera
-            if (cameraMode === 'tpp') {
-                camera.position.x = car.position.x - Math.sin(carRotation) * 12;
-                camera.position.z = car.position.z - Math.cos(carRotation) * 12;
-                camera.position.y = car.position.y + 4.0;
-                camera.lookAt(car.position.x, car.position.y + 1.2, car.position.z);
-            } else {
-                // FPP camera
-                camera.position.x = car.position.x + Math.sin(carRotation) * 0.5;
-                camera.position.y = car.position.y + 1.8;
-                camera.position.z = car.position.z + Math.cos(carRotation) * 0.5;
-                camera.lookAt(
-                    car.position.x + Math.sin(carRotation) * 20,
-                    car.position.y + 1.5,
-                    car.position.z + Math.cos(carRotation) * 20
-                );
-            }
-            
-            // Update UI
-            updateUI();
-            
-            // Render scene
-            renderer.render(scene, camera);
-        }
-        
-        // Start the game when page loads
-        window.onload = init;
+        // Initialize car selection
+        document.querySelector('.carOption[data-car="bmw_m5"]').classList.add('selected');
+        document.querySelector('.mapOption[data-map="miasto"]').classList.add('selected');
     </script>
 </body>
 </html>
