@@ -8,8 +8,9 @@
         body { margin: 0; background: #000; color: #fff; font-family: sans-serif; overflow: hidden; }
         #menu { position: absolute; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; background: #111; z-index: 10; }
         .hidden { display: none !important; }
-        button { padding: 15px 30px; margin: 10px; cursor: pointer; font-size: 1.2rem; }
-        #ui { position: absolute; top: 20px; left: 20px; pointer-events: none; }
+        button { padding: 15px 30px; margin: 10px; cursor: pointer; font-size: 1.2rem; background: #222; color: #fff; border: 1px solid #555; }
+        button:hover { background: #444; }
+        #ui { position: absolute; top: 20px; left: 20px; pointer-events: none; font-size: 20px; color: #0f0; }
     </style>
 </head>
 <body>
@@ -39,34 +40,41 @@
     </div>
 </div>
 
-<div id="ui" class="hidden"><div id="hud">Bieg: 1 | Prędkość: 0 km/h</div></div>
+<div id="ui" class="hidden"><div id="hud">Prędkość: 0 km/h</div></div>
 
 <script type="importmap">{ "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js", "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/" } }</script>
 
 <script type="module">
     import * as THREE from 'three';
     import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+    import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 
-    let s=new THREE.Scene(), c=new THREE.PerspectiveCamera(75, innerWidth/innerHeight, 0.1, 1000), r=new THREE.WebGLRenderer();
+    let s = new THREE.Scene(), c = new THREE.PerspectiveCamera(75, innerWidth/innerHeight, 0.1, 1000), r = new THREE.WebGLRenderer({antialias: true});
     document.body.appendChild(r.domElement); r.setSize(innerWidth, innerHeight);
     s.add(new THREE.AmbientLight(0xffffff, 2));
 
-    let car, peer = new Peer(), conn, carData = {max: 270, acc: 0.00004}, vel = 0, k = {}, isMulti = false;
+    let car, peer = new Peer(), conn, carData, vel = 0, k = {};
+
+    // Inicjalizacja loadera Draco
+    const dracoLoader = new DRACOLoader();
+    dracoLoader.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/');
+    const loader = new GLTFLoader();
+    loader.setDRACOLoader(dracoLoader);
 
     window.show = (id) => {
         document.querySelectorAll('#menu > div').forEach(d => d.classList.add('hidden'));
         document.getElementById(id).classList.remove('hidden');
     };
 
-    window.initGame = (multi) => { isMulti = multi; show('car-select'); };
+    window.initGame = (multi) => { show('car-select'); };
 
     window.selectCar = (model, max, acc) => {
         carData = {max, acc};
         document.getElementById('menu').classList.add('hidden');
         document.getElementById('ui').classList.remove('hidden');
-        const l = new GLTFLoader();
-        l.load(model, (g) => { car = g.scene; car.scale.set(0.01, 0.01, 0.01); s.add(car); });
-        l.load('mapa1.glb', (g) => { g.scene.scale.set(10, 10, 10); s.add(g.scene); });
+        
+        loader.load(model, (g) => { car = g.scene; car.scale.set(0.01, 0.01, 0.01); s.add(car); });
+        loader.load('mapa1.glb', (g) => { g.scene.scale.set(10, 10, 10); s.add(g.scene); });
         animate();
     };
 
