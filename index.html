@@ -30,7 +30,7 @@
     </div>
     <div id="car-select" class="hidden">
         <button onclick="selectCar('bmw_m5.glb', 270, 0.00004)">BMW M5</button>
-        <button onclick="selectCar('porshe.glb', 330, 0.00009)">PORSHE</button>
+        <button onclick="selectCar('porsche.glb', 330, 0.00009)">PORSCHE</button>
     </div>
 </div>
 
@@ -48,7 +48,7 @@
     s.add(new THREE.AmbientLight(0xffffff, 2));
 
     let car, peer = new Peer(), conn, carData, vel = 0, k = {};
-    let currentSteer = 0; // Płynne sterowanie
+    let currentSteer = 0;
     let remoteCar;
 
     const loader = new GLTFLoader().setDRACOLoader(new DRACOLoader().setDecoderPath('https://www.gstatic.com/draco/v1/decoders/'));
@@ -56,9 +56,7 @@
     window.show = (id) => { document.querySelectorAll('#menu > div').forEach(d => d.classList.add('hidden')); document.getElementById(id).classList.remove('hidden'); };
     window.initGame = (multi) => { show('car-select'); };
 
-    document.getElementById('create-lobby').onclick = () => {
-        document.getElementById('peer-info').innerText = "ID: " + peer.id;
-    };
+    document.getElementById('create-lobby').onclick = () => { document.getElementById('peer-info').innerText = "ID: " + peer.id; };
 
     window.joinGame = () => {
         conn = peer.connect(document.getElementById('peer-id').value);
@@ -93,7 +91,6 @@
             if(k['w']) vel = Math.min(vel + carData.acc, carData.max / 5000);
             else vel *= 0.99;
             
-            // Płynne sterowanie (lerp)
             let targetSteer = (k['a'] ? 0.04 : 0) - (k['d'] ? 0.04 : 0);
             currentSteer += (targetSteer - currentSteer) * 0.1;
             car.rotation.y += currentSteer * (vel * 20);
