@@ -48,7 +48,7 @@
     s.add(new THREE.AmbientLight(0xffffff, 2));
 
     let car, peer = new Peer(), conn, carData, vel = 0, k = {};
-    let currentSteer = 0;
+    let currentSteer = 0; // Zmienna do płynnego skrętu
     let remoteCar;
 
     const loader = new GLTFLoader().setDRACOLoader(new DRACOLoader().setDecoderPath('https://www.gstatic.com/draco/v1/decoders/'));
@@ -56,7 +56,9 @@
     window.show = (id) => { document.querySelectorAll('#menu > div').forEach(d => d.classList.add('hidden')); document.getElementById(id).classList.remove('hidden'); };
     window.initGame = (multi) => { show('car-select'); };
 
-    document.getElementById('create-lobby').onclick = () => { document.getElementById('peer-info').innerText = "ID: " + peer.id; };
+    document.getElementById('create-lobby').onclick = () => {
+        document.getElementById('peer-info').innerText = "ID: " + peer.id;
+    };
 
     window.joinGame = () => {
         conn = peer.connect(document.getElementById('peer-id').value);
@@ -67,6 +69,7 @@
     peer.on('connection', (c) => { conn = c; setupConn(); });
 
     function setupConn() {
+        conn.on('open', () => console.log("Połączono!"));
         conn.on('data', (d) => {
             if(!remoteCar) loader.load('bmw_m5.glb', (g) => { remoteCar = g.scene; remoteCar.scale.set(0.05, 0.05, 0.05); s.add(remoteCar); });
             if(remoteCar) { remoteCar.position.set(d.p.x, d.p.y, d.p.z); remoteCar.rotation.y = d.r; }
@@ -91,12 +94,19 @@
             if(k['w']) vel = Math.min(vel + carData.acc, carData.max / 5000);
             else vel *= 0.99;
             
-            let targetSteer = (k['a'] ? 0.04 : 0) - (k['d'] ? 0.04 : 0);
-            currentSteer += (targetSteer - currentSteer) * 0.1;
-            car.rotation.y += currentSteer * (vel * 20);
+            // --- NAPRAWA "JEBUT": Płynne sterowanie ---
+            // 1. Docelowy skręt (zmniejszona czułość do 0.02)
+            let targetSteer = (k['a'] ? 0.02 : 0) - (k['d'] ? 0.02 : 0);
+            
+            // 2. Wygładzanie (lerp) - auto potrzebuje czasu na pełny skręt
+            currentSteer += (targetSteer - currentSteer) * 0.05; 
+            
+            // 3. Zastosowanie obrotu
+            car.rotation.y += currentSteer * (vel * 40); 
             
             car.position.x += Math.sin(car.rotation.y) * vel;
             car.position.z += Math.cos(car.rotation.y) * vel;
+            // ------------------------------------------
 
             if(conn && conn.open) conn.send({p: car.position, r: car.rotation.y});
             
