@@ -1,26 +1,41 @@
 <!DOCTYPE html>
-<html>
+<html lang="pl">
 <head>
+    <meta charset="UTF-8">
     <title>RACE MASTER 3D</title>
-    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
-        body { margin: 0; background: #050505; color: #fff; overflow: hidden; font-family: 'Arial', sans-serif; }
-        #m { position: absolute; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9; background: rgba(0,0,0,0.85); }
-        h1 { font-size: 3rem; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 5px; color: #00d4ff; }
-        button { padding: 15px 40px; font-size: 1.2rem; cursor: pointer; background: #00d4ff; border: none; border-radius: 5px; font-weight: bold; transition: 0.3s; }
-        button:hover { background: #fff; transform: scale(1.1); }
-        .controls { margin-top: 20px; color: #888; font-size: 0.9rem; }
+        body { margin: 0; background: #000; color: #fff; overflow: hidden; font-family: sans-serif; }
+        #m { 
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; 
+            display: flex; flex-direction: column; justify-content: center; align-items: center; 
+            background: radial-gradient(circle, #222, #000); z-index: 100;
+        }
+        h1 { font-size: 4rem; color: #00d4ff; text-shadow: 0 0 10px #00d4ff; margin-bottom: 20px; }
+        button { 
+            padding: 20px 60px; font-size: 2rem; cursor: pointer; 
+            background: transparent; color: #fff; border: 2px solid #00d4ff; 
+            border-radius: 50px; transition: 0.3s; 
+        }
+        button:hover { background: #00d4ff; color: #000; box-shadow: 0 0 20px #00d4ff; }
+        .info { margin-top: 20px; color: #666; }
     </style>
 </head>
 <body>
+
 <div id="m">
     <h1>RACE MASTER 3D</h1>
-    <button id="s">START WYŚCIGU</button>
-    <div class="controls">W-A-S-D: Jazda | V: Kamera | Shift/Ctrl: Bieg</div>
+    <button id="s">START</button>
+    <p class="info">W: Gaz | A/D: Skręt | S: Hamulec | V: Kamera</p>
 </div>
 
+<!-- Załadowanie Three.js przez CDN -->
 <script type="importmap">
-  { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js", "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/" } }
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+    }
+  }
 </script>
 
 <script type="module">
@@ -28,44 +43,53 @@
     import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
     import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 
-    let s=new THREE.Scene(), c=new THREE.PerspectiveCamera(75,innerWidth/innerHeight,0.1,20000), r=new THREE.WebGLRenderer({antialias:true}), car, vel=0, gear=1, view=0, k={}, peer=new Peer(), conn;
-    r.setSize(innerWidth, innerHeight); document.body.appendChild(r.domElement);
+    let s = new THREE.Scene(), 
+        c = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.01, 1000), 
+        r = new THREE.WebGLRenderer({antialias: true});
+    
+    r.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(r.domElement);
+    
     s.add(new THREE.AmbientLight(0xffffff, 2));
+    let dirLight = new THREE.DirectionalLight(0xffffff, 1);
+    dirLight.position.set(5, 5, 5);
+    s.add(dirLight);
+
+    let car, vel = 0, gear = 1, view = 0, k = {};
 
     document.getElementById('s').onclick = () => {
-        document.getElementById('m').style.display='none';
-        const d=new DRACOLoader().setDecoderPath('https://www.gstatic.com/draco/v1/decoders/'), l=new GLTFLoader().setDRACOLoader(d);
+        document.getElementById('m').style.display = 'none';
         
-        l.load('./mapa1.glb', (g) => { g.scene.scale.set(10,10,10); s.add(g.scene); });
+        const l = new GLTFLoader();
+        // Ładowanie modelu (dla testu, jeśli nie masz pliku, to nie wyrzuci błędu krytycznego)
         l.load('./bmw_m4.glb', (g) => { 
-            car=g.scene; 
-            // Zmniejszenie auta 100x
-            car.scale.set(0.01, 0.01, 0.01); 
+            car = g.scene; 
+            car.scale.set(0.01, 0.01, 0.01); // 100x mniejsze
             s.add(car); 
-        });
+        }, undefined, (err) => console.log("Brak pliku .glb, użyj poprawnej ścieżki"));
+
         animate();
     };
 
-    window.onkeydown=(e)=>{k[e.key.toLowerCase()]=true; if(e.key=='v') view=!view; if(e.key=='Shift') gear=Math.min(gear+1,6); if(e.key=='Control') gear=Math.max(gear-1,1);};
-    window.onkeyup=(e)=>k[e.key.toLowerCase()]=false;
+    window.onkeydown = (e) => { k[e.key.toLowerCase()] = true; if(e.key === 'v') view = !view; };
+    window.onkeyup = (e) => { k[e.key.toLowerCase()] = false; };
 
-    function animate(){
+    function animate() {
         requestAnimationFrame(animate);
-        if(car){
-            if(k['w']) vel+=0.0015*gear; else if(k['s']) vel-=0.002; else vel*=0.98;
-            if(k['a']) car.rotation.y+=0.04; if(k['d']) car.rotation.y-=0.04;
-            car.position.x+=Math.sin(car.rotation.y)*vel; car.position.z+=Math.cos(car.rotation.y)*vel;
+        if(car) {
+            if(k['w']) vel += 0.0001; else if(k['s']) vel -= 0.0001; else vel *= 0.98;
+            if(k['a']) car.rotation.y += 0.02; if(k['d']) car.rotation.y -= 0.02;
             
-            // Logika kamery dostosowana do mniejszego obiektu
-            let o=view?new THREE.Vector3(0,0.04,0.12):new THREE.Vector3(0,0.007,0.004); 
-            o.applyAxisAngle(new THREE.Vector3(0,1,0), car.rotation.y);
-            c.position.lerp(car.position.clone().add(o), 0.1); 
-            c.lookAt(car.position);
+            car.position.x += Math.sin(car.rotation.y) * vel;
+            car.position.z += Math.cos(car.rotation.y) * vel;
 
-            // Przykład wysyłania pozycji przez Multiplayer (jeśli połączony)
-            if(conn && conn.open) conn.send({p: car.position, r: car.rotation});
+            // Kamera podąża za małym autem
+            let offset = view ? new THREE.Vector3(0, 0.04, 0.1) : new THREE.Vector3(0, 0.01, 0.04);
+            offset.applyAxisAngle(new THREE.Vector3(0,1,0), car.rotation.y);
+            c.position.lerp(car.position.clone().add(offset), 0.1);
+            c.lookAt(car.position);
         }
-        r.render(s,c);
+        r.render(s, c);
     }
 </script>
 </body>
