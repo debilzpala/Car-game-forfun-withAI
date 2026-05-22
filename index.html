@@ -2,122 +2,1010 @@
 <html lang="pl">
 <head>
     <meta charset="UTF-8">
-    <title>RACE MASTER 3D</title>
-    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Gra 3D - Multiplayer P2P z Lokalnymi Plikami</title>
     <style>
-        body { margin: 0; background: #000; color: #fff; font-family: sans-serif; overflow: hidden; }
-        #menu { position: absolute; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; background: #000; z-index: 10; }
-        .hidden { display: none !important; }
-        button { padding: 15px 30px; margin: 10px; cursor: pointer; }
-        #ui { position: absolute; top: 20px; left: 20px; pointer-events: none; color: #0f0; }
-        #peer-info { margin: 15px; padding: 10px; background: #333; border: 1px solid #fff; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            overflow: hidden;
+            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #1a2a6c);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+        }
+        
+        #gameContainer {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+        
+        #canvasContainer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: none;
+        }
+        
+        canvas {
+            display: block;
+        }
+        
+        /* MENU STYLES */
+        .menu {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.85);
+            z-index: 100;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .menu h1 {
+            font-size: 3.5rem;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            background: linear-gradient(to right, #ff8a00, #e52e71);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 10px rgba(255, 138, 0, 0.5);
+        }
+        
+        .menu h2 {
+            font-size: 2.5rem;
+            margin: 20px 0;
+            color: #ff8a00;
+        }
+        
+        .menu button {
+            background: linear-gradient(45deg, #ff8a00, #e52e71);
+            border: none;
+            padding: 15px 40px;
+            margin: 15px 0;
+            font-size: 1.4rem;
+            color: white;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            width: 300px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: bold;
+        }
+        
+        .menu button:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+            background: linear-gradient(45deg, #ff9a3d, #ec407a);
+        }
+        
+        .menu input {
+            padding: 15px;
+            width: 300px;
+            margin: 15px 0;
+            font-size: 1.2rem;
+            border: 2px solid #ff8a00;
+            border-radius: 50px;
+            background: rgba(0, 0, 0, 0.5);
+            color: white;
+            text-align: center;
+        }
+        
+        .menu input::placeholder {
+            color: #aaa;
+        }
+        
+        .backButton {
+            background: rgba(255, 255, 255, 0.1) !important;
+            border: 1px solid #ff8a00 !important;
+            margin-top: 30px;
+        }
+        
+        /* CAR SELECTOR */
+        .carSelector {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+            margin: 20px 0;
+            max-width: 800px;
+        }
+        
+        .carOption {
+            width: 200px;
+            height: 150px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+            overflow: hidden;
+        }
+        
+        .carOption:hover {
+            transform: scale(1.05);
+            border-color: #ff8a00;
+            box-shadow: 0 0 20px rgba(255, 138, 0, 0.5);
+        }
+        
+        .carOption.selected {
+            border-color: #e52e71;
+            background: rgba(229, 46, 113, 0.2);
+            box-shadow: 0 0 20px rgba(229, 46, 113, 0.5);
+        }
+        
+        .carImage {
+            width: 100%;
+            height: 100px;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+        }
+        
+        .carName {
+            margin-top: 10px;
+            font-size: 1.1rem;
+            font-weight: bold;
+        }
+        
+        /* MAP SELECTOR */
+        .mapSelector {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+            margin: 20px 0;
+            max-width: 800px;
+        }
+        
+        .mapOption {
+            width: 200px;
+            height: 150px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+            overflow: hidden;
+        }
+        
+        .mapOption:hover {
+            transform: scale(1.05);
+            border-color: #ff8a00;
+            box-shadow: 0 0 20px rgba(255, 138, 0, 0.5);
+        }
+        
+        .mapOption.selected {
+            border-color: #e52e71;
+            background: rgba(229, 46, 113, 0.2);
+            box-shadow: 0 0 20px rgba(229, 46, 113, 0.5);
+        }
+        
+        .mapImage {
+            width: 100%;
+            height: 100px;
+            background-size: cover;
+            background-repeat: no-repeat;
+            background-position: center;
+        }
+        
+        .mapName {
+            margin-top: 10px;
+            font-size: 1.1rem;
+            font-weight: bold;
+        }
+        
+        /* LOADING SCREEN */
+        #loadingScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 200;
+            display: none;
+        }
+        
+        .loader {
+            width: 80px;
+            height: 80px;
+            border: 8px solid rgba(255, 255, 255, 0.1);
+            border-top: 8px solid #ff8a00;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 30px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        #loadingText {
+            font-size: 1.5rem;
+            text-align: center;
+            max-width: 80%;
+        }
+        
+        /* GAME UI */
+        #ui {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: white;
+            font-size: 18px;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            pointer-events: none;
+            background: rgba(0,0,0,0.5);
+            padding: 15px;
+            border-radius: 8px;
+            line-height: 1.4;
+            z-index: 10;
+        }
+        
+        #popup {
+            position: absolute;
+            top: 25%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #fff;
+            background: rgba(255, 69, 0, 0.85);
+            padding: 15px 30px;
+            font-size: 24px;
+            font-weight: bold;
+            border-radius: 30px;
+            text-transform: uppercase;
+            box-shadow: 0 0 15px rgba(0,0,0,0.5);
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s ease-in-out;
+            z-index: 10;
+        }
+        
+        #instrukcja {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            background: rgba(0,0,0,0.6);
+            padding: 10px 20px;
+            border-radius: 10px;
+            pointer-events: none;
+            text-align: center;
+            font-size: 14px;
+            z-index: 10;
+        }
+        
+        .highlight {
+            color: #ff8a00;
+        }
+        
+        /* MOBILE CONTROLS */
+        #mobileControls {
+            display: none;
+            position: absolute;
+            bottom: 30px;
+            left: 0;
+            width: 100%;
+            height: 160px;
+            z-index: 30;
+            pointer-events: none;
+        }
+        
+        #joystickZone {
+            position: absolute;
+            left: 40px;
+            bottom: 20px;
+            width: 130px;
+            height: 130px;
+            background: rgba(255,255,255,0.15);
+            border: 3px solid rgba(255,255,255,0.4);
+            border-radius: 50%;
+            pointer-events: auto;
+        }
+        
+        #joystickStick {
+            position: absolute;
+            left: 40px;
+            top: 40px;
+            width: 50px;
+            height: 50px;
+            background: rgba(255, 138, 0, 0.8);
+            border-radius: 50%;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+            transition: transform 0.05s linear;
+        }
+        
+        #pedalsZone {
+            position: absolute;
+            right: 40px;
+            bottom: 20px;
+            width: 180px;
+            height: 130px;
+            pointer-events: auto;
+            display: flex;
+            gap: 20px;
+        }
+        
+        .pedal {
+            flex: 1;
+            height: 100%;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 20px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+            text-transform: uppercase;
+        }
+        
+        #brakePedal {
+            background: rgba(220, 20, 60, 0.6);
+            border: 2px solid #dc143c;
+        }
+        
+        #brakePedal:active {
+            background: rgba(220, 20, 60, 0.9);
+        }
+        
+        #gasPedal {
+            background: rgba(46, 139, 87, 0.6);
+            border: 2px solid #2e8b57;
+        }
+        
+        #gasPedal:active {
+            background: rgba(46, 139, 87, 0.9);
+        }
+        
+        #camBtnMobile {
+            position: absolute;
+            top: 20px;
+            right: 260px;
+            background: rgba(0,0,0,0.6);
+            border: 1px solid white;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 6px;
+            font-weight: bold;
+            z-index: 30;
+            display: none;
+        }
+        
+        /* PLAYER LIST */
+        #playerList {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.7);
+            padding: 15px;
+            border-radius: 8px;
+            color: white;
+            font-weight: bold;
+            z-index: 10;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            min-width: 200px;
+        }
+        
+        .playerItem {
+            padding: 5px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+        }
+        
+        .playerItem:last-child {
+            border-bottom: none;
+        }
+        
+        .playerItem.me {
+            color: #ff8a00;
+        }
+        
+        /* CONNECTION STATUS */
+        #connectionStatus {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.7);
+            padding: 10px 15px;
+            border-radius: 8px;
+            color: white;
+            font-weight: bold;
+            z-index: 10;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        }
+        
+        .statusIndicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .connected {
+            background: #4caf50;
+        }
+        
+        .disconnected {
+            background: #f44336;
+        }
+        
+        /* ERROR MESSAGE */
+        #errorMessage {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+            color: white;
+            font-weight: bold;
+            text-align: center;
+            z-index: 1000;
+            display: none;
+            max-width: 80%;
+        }
     </style>
 </head>
 <body>
-
-<div id="menu">
-    <h1>RACE MASTER 3D</h1>
-    <button onclick="show('mode-select')">START</button>
-    <div id="mode-select" class="hidden">
-        <button onclick="initGame(false)">SINGLE PLAYER</button>
-        <button onclick="show('p2p-menu')">MULTIPLAYER</button>
+    <div id="mainMenu" class="menu">
+        <h1>Race Master 3D</h1>
+        <button id="singlePlayerBtn">Graj Solo</button>
+        <button id="multiplayerBtn">Graj z Przyjacielem</button>
+        <button id="settingsBtn">Ustawienia</button>
     </div>
-    <div id="p2p-menu" class="hidden">
-        <button id="create-lobby">STWÓRZ LOBBY</button>
-        <div id="peer-info">Kliknij by utworzyć ID</div>
-        <input id="peer-id" placeholder="Wklej ID hosta tutaj">
-        <button onclick="joinGame()">DOŁĄCZ</button>
+    
+    <div id="multiplayerMenu" class="menu" style="display: none;">
+        <h2>Tryb Multiplayer</h2>
+        <button id="hostBtn">Stwórz Pokój</button>
+        <button id="joinBtn">Dołącz do Pokoju</button>
+        <button class="backButton" id="backToMainBtn">Powrót</button>
     </div>
-    <div id="car-select" class="hidden">
-        <button onclick="selectCar('bmw_m5.glb', 270, 0.00004)">BMW M5</button>
-        <button onclick="selectCar('porsche.glb', 330, 0.00009)">PORSCHE</button>
+    
+    <div id="hostRoom" class="menu" style="display: none;">
+        <h2>Tworzenie Pokoju</h2>
+        <p>Twoje ID pokoju:</p>
+        <input type="text" id="roomIdDisplay" readonly>
+        <p>Udostępnij ten kod znajomemu, aby mógł dołączyć!</p>
+        <button id="startHostGameBtn">Rozpocznij Grę</button>
+        <button class="backButton" id="backToMultiBtn">Powrót</button>
     </div>
-</div>
+    
+    <div id="joinRoom" class="menu" style="display: none;">
+        <h2>Dołącz do Pokoju</h2>
+        <input type="text" id="roomIdInput" placeholder="Wpisz ID pokoju">
+        <button id="joinRoomBtn">Dołącz</button>
+        <button class="backButton" id="backToMulti2Btn">Powrót</button>
+    </div>
+    
+    <div id="carSelection" class="menu" style="display: none;">
+        <h2>Wybierz Swój Samochób</h2>
+        <div class="carSelector">
+            <div class="carOption" data-car="bmw_m5">
+                <div class="carImage" style="background-image: url('data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 50\"><rect x=\"10\" y=\"15\" width=\"80\" height=\"20\" rx=\"5\" fill=\"%230066cc\"/><circle cx=\"25\" cy=\"35\" r=\"8\" fill=\"%23333\"/><circle cx=\"75\" cy=\"35\" r=\"8\" fill=\"%23333\"/></svg>')"></div>
+                <div class="carName">BMW M5</div>
+            </div>
+            <div class="carOption" data-car="porsche_911">
+                <div class="carImage" style="background-image: url('data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 50\"><rect x=\"15\" y=\"10\" width=\"70\" height=\"25\" rx=\"10\" fill=\"%23cc0000\"/><circle cx=\"25\" cy=\"35\" r=\"8\" fill=\"%23333\"/><circle cx=\"75\" cy=\"35\" r=\"8\" fill=\"%23333\"/></svg>')"></div>
+                <div class="carName">Porsche 911</div>
+            </div>
+        </div>
+        <button id="confirmCarBtn">Potwierdź Wybór</button>
+        <button class="backButton" id="backToCarSelect">Powrót</button>
+    </div>
+    
+    <div id="mapSelection" class="menu" style="display: none;">
+        <h2>Wybierz Mapę</h2>
+        <div class="mapSelector">
+            <div class="mapOption" data-map="miasto">
+                <div class="mapImage" style="background: linear-gradient(45deg, #3498db, #2c3e50);"></div>
+                <div class="mapName">Miasto</div>
+            </div>
+        </div>
+        <button id="confirmMapBtn">Potwierdź Wybór</button>
+        <button class="backButton" id="backToMapSelect">Powrót</button>
+    </div>
+    
+    <div id="loadingScreen">
+        <div class="loader"></div>
+        <div id="loadingText">Ładowanie gry...</div>
+    </div>
+    
+    <div id="errorMessage"></div>
+    
+    <div id="gameContainer">
+        <div id="canvasContainer">
+            </div>
+        
+        <div id="ui">
+            Kamera: <span id="camMode" class="highlight">TPP</span><br>
+            Skrzynia: <span id="gearMode" class="highlight">AUTO</span><br>
+            Bieg: <span id="gear" class="highlight">1</span><br>
+            RPM: <span id="rpm">1000</span> / 7800<br>
+            Prędkość: <span id="speed">0</span> km/h
+        </div>
+        
+        <div id="popup">Zmieniono na MANUAL</div>
+        
+        <div id="instrukcja">
+            Sterowanie: <b>Strzałki / WASD</b> | Skrzynia: <b>Q</b> | Kamera: <b>C</b><br>
+            Manual: <b>LPM</b> = Bieg w dół | <b>PPM</b> = Bieg w górę
+        </div>
+        
+        <div id="playerList">
+            <div class="playerItem me">Ty (Host)</div>
+        </div>
+        
+        <div id="connectionStatus">
+            <span class="statusIndicator disconnected"></span>
+            <span>Połączono (1/4)</span>
+        </div>
+        
+        <div id="mobileControls">
+            <div id="joystickZone">
+                <div id="joystickStick"></div>
+            </div>
+            <div id="pedalsZone">
+                <div id="brakePedal" class="pedal">Hamulec</div>
+                <div id="gasPedal" class="pedal">Gaz</div>
+            </div>
+        </div>
+        
+        <button id="camBtnMobile">KAMERA (C)</button>
+    </div>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/DRACOLoader.js"></script>
+    <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
+    <script>
+        // Global variables
+        let gameState = 'menu'; // menu, carSelect, mapSelect, loading, game
+        let selectedCar = 'bmw_m5';
+        let selectedMap = 'miasto';
+        let isHost = false;
+        let roomId = '';
+        
+        // P2P Networking Variables
+        let peer = null;
+        let connections = [];
+        let remotePlayers = {}; // Przechowuje modele i dane innych graczy
+        let myPeerId = '';
+        
+        // Three.js Variables
+        let scene, camera, renderer, car, road;
+        let gltfLoader, dracoLoader;
 
-<div id="ui" class="hidden"><div id="hud">Prędkość: 0 km/h</div></div>
-
-<script type="importmap">{ "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js", "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/" } }</script>
-
-<script type="module">
-    import * as THREE from 'three';
-    import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-    import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
-
-    let s = new THREE.Scene(), c = new THREE.PerspectiveCamera(75, innerWidth/innerHeight, 0.01, 1000), r = new THREE.WebGLRenderer({antialias: true});
-    document.body.appendChild(r.domElement); r.setSize(innerWidth, innerHeight);
-    s.add(new THREE.AmbientLight(0xffffff, 2));
-
-    let car, peer = new Peer(), conn, carData, vel = 0, k = {};
-    let currentSteer = 0; // Zmienna do płynnego skrętu
-    let remoteCar;
-
-    const loader = new GLTFLoader().setDRACOLoader(new DRACOLoader().setDecoderPath('https://www.gstatic.com/draco/v1/decoders/'));
-
-    window.show = (id) => { document.querySelectorAll('#menu > div').forEach(d => d.classList.add('hidden')); document.getElementById(id).classList.remove('hidden'); };
-    window.initGame = (multi) => { show('car-select'); };
-
-    document.getElementById('create-lobby').onclick = () => {
-        document.getElementById('peer-info').innerText = "ID: " + peer.id;
-    };
-
-    window.joinGame = () => {
-        conn = peer.connect(document.getElementById('peer-id').value);
-        setupConn();
-        initGame(true);
-    };
-
-    peer.on('connection', (c) => { conn = c; setupConn(); });
-
-    function setupConn() {
-        conn.on('open', () => console.log("Połączono!"));
-        conn.on('data', (d) => {
-            if(!remoteCar) loader.load('bmw_m5.glb', (g) => { remoteCar = g.scene; remoteCar.scale.set(0.05, 0.05, 0.05); s.add(remoteCar); });
-            if(remoteCar) { remoteCar.position.set(d.p.x, d.p.y, d.p.z); remoteCar.rotation.y = d.r; }
-        });
-    }
-
-    window.selectCar = (model, max, acc) => {
-        carData = {max, acc};
-        document.getElementById('menu').classList.add('hidden');
-        document.getElementById('ui').classList.remove('hidden');
-        loader.load(model, (g) => { car = g.scene; car.scale.set(0.05, 0.05, 0.05); car.position.y = 0.1; s.add(car); });
-        loader.load('mapa1.glb', (g) => { g.scene.scale.set(10, 10, 10); s.add(g.scene); });
-        animate();
-    };
-
-    window.onkeydown = (e) => k[e.key.toLowerCase()] = true;
-    window.onkeyup = (e) => k[e.key.toLowerCase()] = false;
-
-    function animate() {
-        requestAnimationFrame(animate);
-        if(car) {
-            if(k['w']) vel = Math.min(vel + carData.acc, carData.max / 5000);
-            else vel *= 0.99;
-            
-            // --- NAPRAWA "JEBUT": Płynne sterowanie ---
-            // 1. Docelowy skręt (zmniejszona czułość do 0.02)
-            let targetSteer = (k['a'] ? 0.02 : 0) - (k['d'] ? 0.02 : 0);
-            
-            // 2. Wygładzanie (lerp) - auto potrzebuje czasu na pełny skręt
-            currentSteer += (targetSteer - currentSteer) * 0.05; 
-            
-            // 3. Zastosowanie obrotu
-            car.rotation.y += currentSteer * (vel * 40); 
-            
-            car.position.x += Math.sin(car.rotation.y) * vel;
-            car.position.z += Math.cos(car.rotation.y) * vel;
-            // ------------------------------------------
-
-            if(conn && conn.open) conn.send({p: car.position, r: car.rotation.y});
-            
-            let camOffset = new THREE.Vector3(0, 0.3, -0.5).applyAxisAngle(new THREE.Vector3(0,1,0), car.rotation.y);
-            c.position.copy(car.position).add(camOffset);
-            c.lookAt(car.position.clone().add(new THREE.Vector3(0, 0, 0.05).applyAxisAngle(new THREE.Vector3(0,1,0), car.rotation.y)));
-            
-            document.getElementById('hud').innerText = `Prędkość: ${Math.floor(vel * 5000)} km/h`;
+        // Mobile Controls Safe Declarations (Zapobiega błędom "cannot see/read mobile")
+        let isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        const mobileControlsElement = document.getElementById('mobileControls');
+        const camBtnMobileElement = document.getElementById('camBtnMobile');
+        
+        // DOM Elements
+        const mainMenu = document.getElementById('mainMenu');
+        const multiplayerMenu = document.getElementById('multiplayerMenu');
+        const hostRoom = document.getElementById('hostRoom');
+        const joinRoom = document.getElementById('joinRoom');
+        const carSelection = document.getElementById('carSelection');
+        const mapSelection = document.getElementById('mapSelection');
+        const loadingScreen = document.getElementById('loadingScreen');
+        const loadingText = document.getElementById('loadingText');
+        const canvasContainer = document.getElementById('canvasContainer');
+        const roomIdDisplay = document.getElementById('roomIdDisplay');
+        const roomIdInput = document.getElementById('roomIdInput');
+        const errorMessage = document.getElementById('errorMessage');
+        
+        // Car configurations
+        const carConfigs = {
+            'bmw_m5': {
+                path: 'bmw_m4.glb',
+                pivotOffsetX: 0, pivotOffsetZ: 0,
+                fppCamX: 0.6, fppCamY: 1.8, fppCamZ: 0.5
+            },
+            'porsche_911': {
+                path: 'porsche.glb',
+                pivotOffsetX: 0, pivotOffsetZ: 0,
+                fppCamX: 0.5, fppCamY: 1.4, fppCamZ: 0.2
+            }
+        };
+        
+        // Map configurations
+        const mapConfigs = {
+            'miasto': {
+                path: 'mapa1.glb'
+            }
+        };
+        
+        // Bezpieczne włączanie UI mobilnego tylko jeśli wykryto telefon
+        if(isMobile) {
+            if(mobileControlsElement) mobileControlsElement.style.display = 'block';
+            if(camBtnMobileElement) camBtnMobileElement.style.display = 'block';
         }
-        r.render(s, c);
-    }
-</script>
+        
+        // --- SEKCJA SIECIOWA (PEERJS P2P) ---
+        
+        function initPeer(isRoomHost, targetRoomId = null) {
+            peer = new Peer();
+            
+            peer.on('open', (id) => {
+                myPeerId = id;
+                console.log('Moje ID PeerJS:', id);
+                
+                if (isRoomHost) {
+                    roomId = id;
+                    roomIdDisplay.value = id; 
+                    updatePlayerListUI();
+                } else {
+                    connectToHost(targetRoomId);
+                }
+            });
+            
+            peer.on('error', (err) => {
+                console.error('Błąd sieci PeerJS:', err);
+                showError('Błąd połączenia sieciowego: ' + err.type);
+            });
+            
+            peer.on('connection', (conn) => {
+                setupConnection(conn);
+            });
+        }
+        
+        function connectToHost(hostId) {
+            console.log('Łączenie z hostem:', hostId);
+            const conn = peer.connect(hostId);
+            setupConnection(conn);
+        }
+        
+        function setupConnection(conn) {
+            connections.push(conn);
+            
+            conn.on('open', () => {
+                console.log('Połączenie otwarte z:', conn.peer);
+                updatePlayerListUI();
+                
+                if (gameState === 'game') {
+                    conn.send({ type: 'start_game', map: selectedMap });
+                }
+            });
+            
+            conn.on('data', (data) => {
+                handleNetworkData(data, conn.peer);
+            });
+            
+            conn.on('close', () => {
+                console.log('Połączenie zamknięte z:', conn.peer);
+                if (remotePlayers[conn.peer] && remotePlayers[conn.peer].mesh) {
+                    scene.remove(remotePlayers[conn.peer].mesh);
+                }
+                delete remotePlayers[conn.peer];
+                connections = connections.filter(c => c.peer !== conn.peer);
+                updatePlayerListUI();
+            });
+        }
+        
+        function broadcast(data) {
+            connections.forEach(conn => {
+                if (conn.open) {
+                    conn.send(data);
+                }
+            });
+        }
+        
+        function handleNetworkData(data, senderPeerId) {
+            if (data.type === 'start_game') {
+                selectedMap = data.map;
+                gameState = 'loading';
+                carSelection.style.display = 'none';
+                loadingScreen.style.display = 'flex';
+                startGame();
+            }
+            
+            if (data.type === 'init_car') {
+                console.log(`Gracz ${senderPeerId} wybrał auto: ${data.carType}`);
+                spawnRemotePlayerCar(senderPeerId, data.carType);
+            }
+            
+            if (data.type === 'update_position') {
+                if (remotePlayers[senderPeerId] && remotePlayers[senderPeerId].mesh) {
+                    const remoteCar = remotePlayers[senderPeerId].mesh;
+                    remoteCar.position.set(data.pos.x, data.pos.y, data.pos.z);
+                    remoteCar.rotation.set(data.rot.x, data.rot.y, data.rot.z);
+                }
+            }
+        }
+        
+        function spawnRemotePlayerCar(peerId, carType) {
+            if (remotePlayers[peerId]) return; 
+            
+            remotePlayers[peerId] = { carType: carType, mesh: null };
+            
+            const config = carConfigs[carType];
+            if (gltfLoader) {
+                gltfLoader.load(config.path, (gltf) => {
+                    const remoteMesh = gltf.scene;
+                    remoteMesh.scale.set(0.5, 0.5, 0.5);
+                    remoteMesh.position.set(3, 0.5, 0); 
+                    scene.add(remoteMesh);
+                    remotePlayers[peerId].mesh = remoteMesh;
+                }, undefined, (err) => {
+                    console.error('Błąd ładowania auta przeciwnika:', err);
+                });
+            }
+        }
+        
+        function updatePlayerListUI() {
+            const playerListDiv = document.getElementById('playerList');
+            const statusIndicator = document.querySelector('.statusIndicator');
+            const connectionStatusText = document.querySelector('#connectionStatus span:last-child');
+            
+            if (!peer) return;
+            
+            let html = `<div class="playerItem me">Ty (${isHost ? 'Host' : 'Gracz'})</div>`;
+            connections.forEach((c, index) => {
+                html += `<div class="playerItem">Gracz ${index + 2} (${c.peer.substring(0,4)})</div>`;
+            });
+            playerListDiv.innerHTML = html;
+            
+            const totalPlayers = connections.length + 1;
+            if(connectionStatusText) connectionStatusText.textContent = `Połączono (${totalPlayers}/4)`;
+            if(statusIndicator) {
+                if (totalPlayers > 1) {
+                    statusIndicator.className = "statusIndicator connected";
+                } else {
+                    statusIndicator.className = "statusIndicator disconnected";
+                }
+            }
+        }
+        
+        // --- MENU NAVIGATION ---
+        
+        document.getElementById('singlePlayerBtn').addEventListener('click', () => {
+            gameState = 'carSelect';
+            isHost = true;
+            mainMenu.style.display = 'none';
+            carSelection.style.display = 'flex';
+        });
+        
+        document.getElementById('multiplayerBtn').addEventListener('click', () => {
+            mainMenu.style.display = 'none';
+            multiplayerMenu.style.display = 'flex';
+        });
+        
+        document.getElementById('hostBtn').addEventListener('click', () => {
+            isHost = true;
+            multiplayerMenu.style.display = 'none';
+            hostRoom.style.display = 'flex';
+            initPeer(true); 
+        });
+        
+        document.getElementById('joinBtn').addEventListener('click', () => {
+            multiplayerMenu.style.display = 'none';
+            joinRoom.style.display = 'flex';
+        });
+        
+        document.getElementById('startHostGameBtn').addEventListener('click', () => {
+            gameState = 'carSelect';
+            hostRoom.style.display = 'none';
+            carSelection.style.display = 'flex';
+        });
+        
+        document.getElementById('joinRoomBtn').addEventListener('click', () => {
+            const typedRoomId = roomIdInput.value.trim();
+            if (typedRoomId) {
+                isHost = false;
+                gameState = 'carSelect';
+                joinRoom.style.display = 'none';
+                carSelection.style.display = 'flex';
+                initPeer(false, typedRoomId); 
+            } else {
+                alert('Wpisz ID pokoju!');
+            }
+        });
+        
+        document.getElementById('backToMainBtn').addEventListener('click', () => { multiplayerMenu.style.display = 'none'; mainMenu.style.display = 'flex'; });
+        document.getElementById('backToMultiBtn').addEventListener('click', () => { 
+            if(peer) { peer.destroy(); peer = null; connections = []; }
+            hostRoom.style.display = 'none'; multiplayerMenu.style.display = 'flex'; 
+        });
+        document.getElementById('backToMulti2Btn').addEventListener('click', () => { joinRoom.style.display = 'none'; multiplayerMenu.style.display = 'flex'; });
+        
+        // Car Selection
+        document.querySelectorAll('.carOption').forEach(option => {
+            option.addEventListener('click', () => {
+                document.querySelectorAll('.carOption').forEach(opt => opt.classList.remove('selected'));
+                option.classList.add('selected');
+                selectedCar = option.dataset.car;
+            });
+        });
+        
+        document.getElementById('confirmCarBtn').addEventListener('click', () => {
+            if (isHost) {
+                gameState = 'mapSelect';
+                carSelection.style.display = 'none';
+                mapSelection.style.display = 'flex';
+            } else {
+                gameState = 'loading';
+                carSelection.style.display = 'none';
+                loadingScreen.style.display = 'flex';
+                if(loadingText) loadingText.textContent = "Oczekiwanie aż Host wybierze mapę...";
+            }
+        });
+        
+        document.getElementById('backToCarSelect').addEventListener('click', () => {
+            carSelection.style.display = 'none';
+            if (isHost) { hostRoom.style.display = 'flex'; } else { joinRoom.style.display = 'flex'; }
+        });
+        
+        // Map Selection
+        document.getElementById('confirmMapBtn').addEventListener('click', () => {
+            gameState = 'loading';
+            mapSelection.style.display = 'none';
+            loadingScreen.style.display = 'flex';
+            
+            broadcast({ type: 'start_game', map: selectedMap });
+            
+            setTimeout(() => {
+                startGame();
+            }, 1000);
+        });
+        
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.style.display = 'block';
+            setTimeout(() => { errorMessage.style.display = 'none'; }, 5000);
+        }
+        
+        // --- GAME ENGINE (THREE.JS) ---
+        
+        function startGame() {
+            gameState = 'game';
+            loadingScreen.style.display = 'none';
+            canvasContainer.style.display = 'block';
+            
+            initGame();
+        }
+        
+        function initGame() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x87CEEB);
+            scene.fog = new THREE.FogExp2(0x87CEEB, 0.008);
+            
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1500);
+            camera.position.set(0, 5, 10);
+            
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            
+            canvasContainer.innerHTML = '';
+            canvasContainer.appendChild(renderer.domElement);
+            
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+            scene.add(ambientLight);
+            
+            const dirLight = new THREE.DirectionalLight(0xffffff, 0.9);
+            dirLight.position.set(40, 100, 20);
+            dirLight.castShadow = true;
+            scene.add(dirLight);
+            
+            dracoLoader = new THREE.DRACOLoader();
+            dracoLoader.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/libs/draco/');
+            
+            gltfLoader = new THREE.GLTFLoader();
+            gltfLoader.setDRACOLoader(dracoLoader);
+            
+            const carConfig = carConfigs[selectedCar];
+            gltfLoader.load(
+                carConfig.path,
+                (gltf) => {
+                    car = gltf.scene;
+                    car.scale.set(0.5, 0.5, 0.5);
+                    car.position.set(isHost ? 0 : 3, 0.5, 0); 
+                    car.castShadow = true;
+                    scene.add(car);
+                    
+                    broadcast({ type: 'init_car', carType: selectedCar });
+                    
+                    connections.forEach(conn => {
+                        conn.send({ type: 'init_car', carType: selectedCar });
+                    });
+                    
+                    loadMap(gltfLoader);
+                },
+                undefined,
+                (error) => {
+                    console.error('Błąd ładowania samochodu:', error);
+                    showError(`Nie można załadować samochodu: ${error.message}`);
+                }
+            );
+            
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+            
+            function animate() {
+                requestAnimationFrame(animate);
+                
+                if (car) {
+                    // Ruch demonstracyjny (Zastąp to potem swoją fizyką pojazdu)
+                    car.position.z -= 0.1;
+                    camera.position.z = car.position.z + 10;
+                    camera.lookAt(car.position.x, car.position.y, car.position.z);
+                    
+                    // Ciągłe rozsyłanie swojej pozycji i rotacji do innych peerów
+                    broadcast({
+                        type: 'update_position',
+                        pos: { x: car.position.x, y: car.position.y, z: car.position.z },
+                        rot: { x: car.rotation.x, y: car.rotation.y, z: car.rotation.z }
+                    });
+                }
+                
+                renderer.render(scene, camera);
+            }
+            
+            animate();
+        }
+        
+        function loadMap(loader) {
+            const mapConfig = mapConfigs[selectedMap];
+            loader.load(
+                mapConfig.path,
+                (gltf) => {
+                    const map = gltf.scene;
+                    map.scale.set(1, 1, 1);
+                    map.position.y = 0;
+                    map.receiveShadow = true;
+                    scene.add(map);
+                },
+                undefined,
+                (error) => {
+                    console.error('Błąd ładowania mapy:', error);
+                    showError(`Nie można załadować mapy: ${error.message}`);
+                }
+            );
+        }
+        
+        // Domyślne zaznaczenia w menu na start
+        document.querySelector('.carOption[data-car="bmw_m5"]').classList.add('selected');
+        document.querySelector('.mapOption[data-map="miasto"]').classList.add('selected');
+    </script>
 </body>
 </html>
