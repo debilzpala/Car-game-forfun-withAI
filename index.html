@@ -2,1162 +2,1028 @@
 <html lang="pl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Advanced 3D Racing Engine & P2P Multiplayer</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CyberCore Engine v4.0 - Monolith Edition</title>
     <style>
         :root {
             --neon-cyan: #00e5ff;
             --neon-orange: #ff9800;
-            --neon-red: #ff3d00;
-            --bg-dark: #030a10;
+            --neon-magenta: #ff0055;
+            --neon-green: #00ff66;
+            --neon-purple: #9d4edd;
+            --bg-dark: #02060c;
+            --bg-card: rgba(4, 14, 28, 0.85);
+            --border-glow: 0 0 15px rgba(0, 229, 255, 0.4);
+            --border-glow-orange: 0 0 15px rgba(255, 152, 0, 0.4);
         }
-        
+
         body, html {
-            margin: 0;
-            padding: 0;
-            overflow: hidden;
-            width: 100%;
-            height: 100%;
+            margin: 0; padding: 0; overflow: hidden;
+            width: 100%; height: 100%;
             background-color: var(--bg-dark);
             font-family: 'Courier New', Courier, monospace;
-            user-select: none;
+            color: #ffffff; user-select: none;
+            -webkit-user-select: none;
         }
 
-        #canvas-container {
-            width: 100%;
-            height: 100%;
-            position: absolute;
-            top: 0;
-            left: 0;
-            z-index: 1;
+        #canvas-viewport {
+            width: 100%; height: 100%;
+            position: absolute; top: 0; left: 0; z-index: 1;
         }
 
-        /* TELEMETRY DASHBOARD (HUD) */
-        #hud-container {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            z-index: 10;
-            background: rgba(5, 15, 25, 0.85);
-            border: 1px solid #005f73;
-            border-radius: 8px;
-            padding: 20px;
-            color: #ffffff;
-            width: 280px;
-            box-shadow: 0 0 20px rgba(0, 229, 255, 0.15);
-            pointer-events: none;
+        .ui-layer {
+            position: absolute; top: 0; left: 0;
+            width: 100%; height: 100%; z-index: 100;
+            pointer-events: none; display: flex;
+            justify-content: center; align-items: center;
         }
 
-        .hud-row {
-            margin-bottom: 12px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+        .interactive { pointer-events: auto; }
+
+        .menu-frame {
+            background: var(--bg-card);
+            border: 2px solid var(--neon-cyan);
+            box-shadow: var(--border-glow);
+            border-radius: 16px; padding: 35px;
+            width: 650px; max-width: 95%;
+            box-sizing: border-box; text-align: center;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            transition: all 0.5s cubic-bezier(0.15, 0.85, 0.35, 1);
         }
 
-        .hud-label {
-            color: #88a0b0;
-            font-size: 11px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .hud-value {
-            font-size: 16px;
-            font-weight: bold;
-            color: var(--neon-cyan);
-        }
-
-        .hud-value-large {
-            font-size: 28px;
-            font-weight: bold;
+        .menu-title {
+            font-size: 32px; font-weight: 900; letter-spacing: 6px;
+            margin-bottom: 5px; text-transform: uppercase;
+            text-shadow: var(--border-glow);
             color: #ffffff;
         }
 
-        /* TACHOMETER BAR */
-        .tacho-container {
-            width: 100%;
-            height: 12px;
-            background: #0a192f;
-            border: 1px solid #005f73;
-            border-radius: 4px;
-            margin: 8px 0;
-            overflow: hidden;
-            position: relative;
+        .menu-subtitle {
+            font-size: 11px; color: #507a99; letter-spacing: 2px;
+            margin-bottom: 30px; text-transform: uppercase;
         }
 
-        #tacho-bar {
-            height: 100%;
-            width: 0%;
-            background: linear-gradient(90deg, #00e5ff 0%, #00ff66 70%, #ff3d00 90%);
+        .garage-grid {
+            display: grid; grid-template-columns: 1fr;
+            gap: 14px; margin: 25px 0;
+            max-height: 400px; overflow-y: auto;
+            padding-right: 5px;
+        }
+
+        .garage-grid::-webkit-scrollbar {
+            width: 6px;
+        }
+        .garage-grid::-webkit-scrollbar-thumb {
+            background: var(--neon-cyan);
+            border-radius: 3px;
+        }
+
+        .vehicle-card {
+            border: 1px solid #005f73; padding: 18px;
+            background: rgba(1, 12, 24, 0.7); cursor: pointer;
+            border-radius: 10px; text-align: left; 
+            transition: all 0.25s cubic-bezier(0.1, 0.7, 0.1, 1);
+            position: relative; overflow: hidden;
+        }
+        
+        .vehicle-card::before {
+            content: ''; position: absolute; top: 0; left: 0;
+            width: 4px; height: 100%; background: transparent;
+            transition: all 0.2s;
+        }
+
+        .vehicle-card.active {
+            border-color: var(--neon-orange);
+            background: rgba(255, 152, 0, 0.08);
+            box-shadow: var(--border-glow-orange);
+        }
+
+        .vehicle-card.active::before {
+            background: var(--neon-orange);
+        }
+
+        .card-header {
+            display: flex; justify-content: space-between; align-items: center;
+        }
+
+        .card-title { font-weight: 900; font-size: 16px; color: var(--neon-cyan); letter-spacing: 1px; }
+        .card-file { font-size: 11px; color: var(--neon-purple); font-weight: bold; }
+        .card-desc { font-size: 12px; color: #a0c0dd; margin-top: 6px; line-height: 1.4; }
+        
+        .card-specs {
+            display: flex; gap: 15px; margin-top: 10px;
+            font-size: 11px; color: #6088aa; border-top: 1px solid rgba(0,95,115,0.3);
+            padding-top: 8px;
+        }
+        .spec-item strong { color: #fff; }
+
+        .cyber-btn {
+            width: 100%; background: rgba(0, 229, 255, 0.1);
+            color: #ffffff; border: 2px solid var(--neon-cyan);
+            padding: 18px; margin-top: 15px;
+            font-size: 15px; font-weight: 900; font-family: inherit;
+            letter-spacing: 3px; cursor: pointer; 
+            transition: all 0.2s cubic-bezier(0.1, 0.8, 0.1, 1);
+            text-transform: uppercase; border-radius: 8px;
+        }
+
+        .cyber-btn:hover {
+            background: var(--neon-cyan); color: #000000;
+            box-shadow: var(--border-glow);
+        }
+
+        /* DIAGNOSTKA HUD CORE */
+        #hud-master-container {
+            position: absolute; top: 25px; left: 25px; z-index: 10;
+            background: var(--bg-card); border: 1px solid #005f73;
+            border-radius: 12px; padding: 22px; width: 320px;
+            pointer-events: none; display: none;
+            backdrop-filter: blur(6px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        .hud-header {
+            font-size: 11px; letter-spacing: 2px; color: #5280a3;
+            border-bottom: 1px solid rgba(0,95,115,0.4);
+            padding-bottom: 8px; margin-bottom: 12px;
+            display: flex; justify-content: space-between;
+        }
+
+        .hud-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .hud-label { color: #819eb3; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; }
+        .hud-value { font-size: 14px; font-weight: bold; color: var(--neon-cyan); }
+        
+        .hud-speed-display { display: flex; align-items: baseline; margin: 10px 0; }
+        .hud-speed-digits { font-size: 56px; font-weight: 900; color: #ffffff; text-shadow: 0 0 10px rgba(255,255,255,0.2); }
+        .hud-speed-unit { font-size: 14px; font-weight: bold; color: #5280a3; margin-left: 8px; letter-spacing: 1px; }
+
+        .bar-container {
+            width: 100%; height: 6px; background: rgba(0,95,115,0.2);
+            border-radius: 3px; overflow: hidden; margin-top: 4px;
+        }
+        .bar-fill {
+            height: 100%; width: 0%; background: var(--neon-cyan);
             transition: width 0.05s linear;
         }
+        .bar-fill.rpm-warn { background: var(--neon-magenta); }
 
-        #tacho-redline {
-            position: absolute;
-            right: 15%;
-            top: 0;
-            width: 2px;
-            height: 100%;
-            background: var(--neon-red);
+        /* REAL-TIME PROFILER DEBUGGER */
+        #telemetry-matrix {
+            position: absolute; top: 25px; right: 25px; z-index: 10;
+            background: rgba(2, 8, 16, 0.85); border: 1px solid rgba(255, 0, 85, 0.3);
+            border-radius: 8px; padding: 15px; width: 280px;
+            font-size: 10px; color: #a2bccc; pointer-events: none;
+            display: none; line-height: 1.6;
         }
+        .matrix-title { color: var(--neon-magenta); font-weight: bold; letter-spacing: 1px; margin-bottom: 8px; border-bottom: 1px solid rgba(255,0,85,0.2); padding-bottom: 4px;}
 
-        /* G-FORCE METER */
-        #g-meter {
-            width: 60px;
-            height: 60px;
-            border: 1px solid #005f73;
-            border-radius: 50%;
-            position: relative;
-            margin: 10px auto;
-            background: rgba(10, 25, 47, 0.5);
+        /* SYSTEMY STEROWANIA DOTYKOWEGO */
+        #mobile-touch-overlay {
+            position: absolute; bottom: 40px; left: 0; width: 100%;
+            z-index: 50; display: none; justify-content: space-between;
+            padding: 0 50px; box-sizing: border-box; pointer-events: none;
         }
-
-        #g-dot {
-            width: 6px;
-            height: 6px;
-            background: var(--neon-orange);
-            border-radius: 50%;
-            position: absolute;
-            top: 27px;
-            left: 27px;
-            box-shadow: 0 0 8px var(--neon-orange);
+        .touch-group { display: flex; gap: 20px; pointer-events: auto; }
+        .touch-btn {
+            width: 80px; height: 80px; background: rgba(0, 229, 255, 0.05);
+            border: 2px solid var(--neon-cyan); border-radius: 16px;
+            pointer-events: auto; display: flex; flex-direction: column; justify-content: center;
+            align-items: center; font-weight: 900; color: #fff; font-size: 12px;
+            transition: background 0.1s;
         }
+        .touch-btn:active { background: rgba(0, 229, 255, 0.3); }
+        .touch-btn.btn-action { border-color: var(--neon-orange); }
+        .touch-btn.btn-action:active { background: rgba(255, 152, 0, 0.3); }
 
-        /* NETWORK MANAGEMENT PANEL */
-        #network-panel {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            z-index: 10;
-            background: rgba(5, 15, 25, 0.85);
-            border: 1px solid #005f73;
-            border-radius: 8px;
-            padding: 15px;
-            color: #ffffff;
-            width: 300px;
-            box-shadow: 0 0 20px rgba(0, 229, 255, 0.15);
+        /* TABLICA POWIADOMIEŃ IN-GAME */
+        #core-notification {
+            position: absolute; bottom: 150px; center: 50%; width: 100%;
+            text-align: center; z-index: 55; font-size: 14px;
+            font-weight: bold; color: var(--neon-green); letter-spacing: 2px;
+            text-transform: uppercase; pointer-events: none; opacity: 0;
+            transition: opacity 0.3s; text-shadow: 0 0 8px rgba(0,255,102,0.5);
         }
 
-        .net-title {
-            color: var(--neon-orange);
-            font-size: 12px;
-            font-weight: bold;
-            margin-bottom: 10px;
-            letter-spacing: 1px;
-            border-bottom: 1px solid #005f73;
-            padding-bottom: 5px;
-        }
-
-        .net-id-box {
-            background: #020c16;
-            border: 1px dashed #00e5ff;
-            padding: 8px;
-            font-size: 12px;
-            word-break: break-all;
-            margin-bottom: 10px;
-            color: #a0c0d0;
-        }
-
-        .net-input {
-            width: 100%;
-            background: #020c16;
-            border: 1px solid #005f73;
-            color: #fff;
-            padding: 8px;
-            box-sizing: border-box;
-            margin-bottom: 10px;
-            font-family: monospace;
-        }
-
-        .net-input:focus {
-            outline: none;
-            border-color: var(--neon-cyan);
-        }
-
-        .net-btn {
-            width: 100%;
-            background: #005f73;
-            color: white;
-            border: none;
-            padding: 10px;
-            font-weight: bold;
-            cursor: pointer;
-            letter-spacing: 1px;
-            transition: background 0.2s;
-        }
-
-        .net-btn:hover {
-            background: var(--neon-cyan);
-            color: #000;
-        }
-
-        #net-status {
-            margin-top: 8px;
-            font-size: 11px;
-            color: #aaa;
-        }
-
-        /* LOADING OVERLAY */
-        #loader-overlay {
-            position: absolute;
-            top:0; left:0; width:100%; height:100%;
-            background: var(--bg-dark);
-            z-index: 100;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            color: #fff;
-        }
-
-        .spinner {
-            width: 50px; height: 50px;
-            border: 3px solid #0a192f;
-            border-radius: 50%;
-            border-top-color: var(--neon-cyan);
-            animation: spin 1s ease-in-out infinite;
-        }
-
-        #progress-bar-container {
-            width: 300px; height: 4px;
-            background: #0a192f;
-            margin-top: 20px;
-            border-radius: 2px;
-            overflow: hidden;
-        }
-        #progress-bar {
-            width: 0%; height: 100%;
-            background: var(--neon-cyan);
-        }
-
-        @keyframes spin { to { transform: rotate(360deg); } }
-        
-        .rev-limiter {
-            animation: red-flash 0.05s infinite alternate;
-        }
-        @keyframes red-flash {
-            from { color: #ffffff; }
-            to { color: var(--neon-red); }
+        @media (max-width: 1024px) {
+            #mobile-touch-overlay { display: flex; }
         }
     </style>
 
-    <!-- Three.js i Moduły Ładowania zewnętrznych plików tekstur/modeli -->
+    <!-- WYMAGANE LINKI DO PACZEK THREE.JS I DRACO -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/MTLLoader.js"></script>
-    <!-- PeerJS do bezpośredniej komunikacji sieciowej P2P -->
-    <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/DRACOLoader.js"></script>
 </head>
 <body>
 
-    <div id="loader-overlay">
-        <div class="spinner"></div>
-        <div style="margin-top: 20px; font-size: 14px; letter-spacing: 2px;">INICJOWANIE SILNIKA 3D...</div>
-        <div id="progress-bar-container"><div id="progress-bar"></div></div>
-        <div id="loader-text" style="margin-top: 8px; font-size: 11px; color:#557788;">Generowanie infrastruktury miasta...</div>
-    </div>
+    <div id="canvas-viewport"></div>
 
-    <div id="canvas-container"></div>
-
-    <!-- HUB TELEMETRII W CZASIE RZECZYWISTYM -->
-    <div id="hud-container">
-        <div class="hud-row">
-            <span class="hud-label">Sygnał/Tryb</span>
-            <span class="hud-value" id="hud-mode">TPP / M_AUTO</span>
-        </div>
-        <div class="hud-row" style="margin-bottom: 0;">
-            <span class="hud-label">Prędkość Pojazdu</span>
-            <div>
-                <span class="hud-value-large" id="hud-speed">0</span>
-                <span style="font-size: 10px; color: #88a0b0; margin-left: 4px;">KM/H</span>
+    <div class="ui-layer" id="ui-container">
+        <div class="menu-frame interactive" id="screen-garage">
+            <div class="menu-title">Cyber Core</div>
+            <div class="menu-subtitle">System Inicjalizacji Zasobów Maszynowych</div>
+            
+            <div class="garage-grid" id="dom-garage-grid">
+                <!-- Generowane dynamicznie przez silnik danych -->
             </div>
+            
+            <button class="cyber-btn" onclick="CoreEngine.SystemManager.bootSequence()">Zainicjuj Rdzeń Pojazdu</button>
+        </div>
+    </div>
+
+    <!-- CENTRALNY PULPIT HUD -->
+    <div id="hud-master-container">
+        <div class="hud-header">
+            <span>SYS_STATUS: ACTIVE</span>
+            <span id="hud-core-clock">00:00:00</span>
         </div>
         <div class="hud-row">
-            <span class="hud-label">Skrzynia / Bieg</span>
-            <span class="hud-value" id="hud-gear" style="font-size: 20px; color: var(--neon-orange);">1</span>
+            <span class="hud-label">Model</span>
+            <span class="hud-value" id="hud-car-name">Brak danych</span>
         </div>
         
-        <div class="hud-label">Obroty Silnika (RPM)</div>
-        <div class="tacho-container">
-            <div id="tacho-bar"></div>
-            <div id="tacho-redline"></div>
-        </div>
-        <div class="hud-row" style="margin-top: -5px;">
-            <span style="font-size: 10px; color:#556677;">1000</span>
-            <span id="hud-rpm-numeric" style="font-weight: bold; font-size: 12px;">1000 RPM</span>
-            <span style="font-size: 10px; color:var(--neon-red);">7000</span>
+        <div class="hud-speed-display">
+            <span class="hud-speed-digits" id="hud-speed-val">0</span>
+            <span class="hud-speed-unit">KM/H</span>
         </div>
 
-        <hr style="border:0; border-top: 1px solid #005f73; margin: 15px 0;">
-
-        <div class="hud-row">
-            <span class="hud-label">Grip Osi Tylnej</span>
-            <span id="hud-grip" style="font-weight: bold; color: #00ff66;">NOMINALNY</span>
+        <div class="hud-row" style="margin-bottom: 4px;">
+            <span class="hud-label">Prędkość obrotowa</span>
+            <span class="hud-value" id="hud-rpm-val">1000 RPM</span>
+        </div>
+        <div class="bar-container">
+            <div class="bar-fill" id="hud-rpm-bar"></div>
         </div>
 
-        <div class="hud-label" style="text-align: center; margin-bottom: 5px;"> przeciążenia G-FORCE</div>
-        <div id="g-meter">
-            <div id="g-dot"></div>
+        <div class="hud-row" style="margin-top: 15px; margin-bottom: 0;">
+            <span class="hud-label">Przełożenie</span>
+            <span class="hud-value" id="hud-gear-val" style="color: var(--neon-orange);">N</span>
         </div>
     </div>
 
-    <!-- PANEL SIECIOWY MULTIPLAYER -->
-    <div id="network-panel">
-        <div class="net-title">POKÓJ MULTIPLAYER (P2P COOP)</div>
-        <div id="my-id-box" class="net-id-box">Generowanie Twojego klucza sieciowego...</div>
-        <input type="text" id="join-id-input" class="net-input" placeholder="Wklej ID gospodarza (Hosta)">
-        <button id="btn-connect" class="net-btn">DOŁĄCZ DO SESJI</button>
-        <div id="net-status">Połączenie: Lokalne (Singleplayer)</div>
-        <div id="ping-display" style="font-size:10px; color:#557788; margin-top:5px; display:none;">Ping P2P: -- ms</div>
+    <!-- PROFILER DIAGNOSTYCZNY (MATRYCA) -->
+    <div id="telemetry-matrix" id="hud-matrix">
+        <div class="matrix-title">FIZYKA REJESTRU CORE</div>
+        <div>POS_X: <span id="mat-x">0.00</span></div>
+        <div>POS_Z: <span id="mat-z">0.00</span></div>
+        <div>HEADING: <span id="mat-head">0.00 rad</span></div>
+        <div>ACCEL: <span id="mat-acc">0.00 m/s²</span></div>
+        <div>NET_FORCE: <span id="mat-force">0.00 N</span></div>
+        <div>AIR_DRAG: <span id="mat-drag">0.00 N</span></div>
+        <div>STEER_RAD: <span id="mat-steer">0.00</span></div>
+        <div>MOMENTUM: <span id="mat-momentum">0.00 kg·m/s</span></div>
     </div>
 
+    <!-- POWIADOMIENIE EKRANOWE -->
+    <div id="core-notification">Bieg zmieniony</div>
+
+    <!-- INTERFEJS DOTYKOWY MOTO G85 / MOBILNY -->
+    <div id="mobile-touch-overlay">
+        <div class="touch-group">
+            <div class="touch-btn" id="btn-touch-left">◀<br>LEWO</div>
+            <div class="touch-btn" id="btn-touch-right">▶<br>PRAWO</div>
+        </div>
+        <div class="touch-group">
+            <div class="touch-btn btn-action" id="btn-touch-gas">▲<br>GAZ</div>
+            <div class="touch-btn btn-action" id="btn-touch-brake">▼<br>HAMULEC</div>
+        </div>
+    </div>
+
+    <!-- ARCYDZIEŁO SKRYPTOWE: ARCHITEKTURA ARCHITEKTONICZNA SILNIKA CYBERCORE -->
     <script>
-        // ============================================================================
-        // ARCHITEKTURA I KONFIGURACJA PODSTAWOWA SILNIKA
-        // ============================================================================
-        
-        const CONFIG = {
-            physics: {
-                mass: 1350,            // masa pojazdu w kg
-                gravity: 9.81,         // g m/s^2
-                dragCoeff: 0.32,       // współczynnik oporu pow.
-                rrCoeff: 0.015,        // opór toczenia
-                engineForceMax: 9500,  // max siła napędowa
-                brakeForceMax: 18000,  // max siła hamowania
-                handbrakeForce: 26000, // siła hamulca ręcznego
-                steeringSpeed: 0.04,   // szybkość skręcania kół
-                maxSteerAngle: 0.55,   // max kąt skrętu w radianach
-                snappyGrip: 0.85       // powrót przyczepności
+        /**
+         * System Główny CyberCore Engine v4.0 (Monolith)
+         * Zawiera kompletny system fizyki czwartej generacji przeciwdziałający przeskokom kwantowym.
+         */
+        const CoreEngine = {
+            Config: {
+                Graphics: {
+                    resolutionCap: 2,
+                    shadowsEnabled: true,
+                    fogDensity: 0.006,
+                    skyColor: 0x02060c,
+                    gridColor: 0x00e5ff,
+                    gridSize: 2000,
+                    gridDivisions: 200
+                },
+                TimeStep: {
+                    fixedDelta: 0.016666, // Stabilne 60Hz dla deterministycznej fizyki
+                    maxAccumulator: 0.1
+                },
+                Environment: {
+                    gravity: 9.81,
+                    airDensity: 1.225,
+                    buildingCount: 120,
+                    particleMax: 150
+                }
             },
-            engine: {
-                idleRpm: 950,
-                redlineRpm: 6300,
-                maxRpm: 7200,
-                gearRatios: [0, 3.65, 2.15, 1.45, 1.05, 0.82], // Biegi 1-5
-                finalDrive: 3.55
+            
+            // Baza danych Twoich trzech maszyn wraz ze sztywnymi, bezpiecznymi nastawami mechanicznymi
+            Database: [
+                {
+                    id: 0,
+                    name: "BMW M4",
+                    file: "bmw_m5.glb",
+                    mass: 1650,
+                    maxForce: 9200,
+                    maxSpeed: 280,
+                    dragCoeff: 0.28,
+                    wheelBase: 2.85,
+                    steerSpeed: 0.05,
+                    returnSpeed: 0.12,
+                    maxSteerAngle: 0.42,
+                    gearsCount: 6,
+                    gearRatios: [0, 3.4, 2.1, 1.4, 1.0, 0.8, 0.65],
+                    finalDrive: 3.15,
+                    type: "car",
+                    camDistance: 11,
+                    camHeight: 3.6
+                },
+                {
+                    id: 1,
+                    name: "Porsche 911 Turbo",
+                    file: "porsche.glb",
+                    mass: 1470,
+                    maxForce: 10500,
+                    maxSpeed: 315,
+                    dragCoeff: 0.26,
+                    wheelBase: 2.45,
+                    steerSpeed: 0.06,
+                    returnSpeed: 0.14,
+                    maxSteerAngle: 0.38,
+                    gearsCount: 7,
+                    gearRatios: [0, 3.8, 2.4, 1.7, 1.25, 0.95, 0.75, 0.62],
+                    finalDrive: 3.44,
+                    type: "car",
+                    camDistance: 10.5,
+                    camHeight: 3.3
+                },
+                {
+                    id: 2,
+                    name: "Kamikaze K1",
+                    file: "kamikaze.glb",
+                    mass: 48,
+                    maxForce: 1100,
+                    maxSpeed: 82,
+                    dragCoeff: 0.65, // Duży opór powietrza kierowcy stojącego na hulajnodze
+                    wheelBase: 1.15,
+                    steerSpeed: 0.08,
+                    returnSpeed: 0.22,
+                    maxSteerAngle: 0.65, // Zwrotna kierownica hulajnogi
+                    gearsCount: 1,
+                    gearRatios: [0, 1.0],
+                    finalDrive: 4.0,
+                    type: "scooter",
+                    camDistance: 6.5,
+                    camHeight: 2.2
+                }
+            ],
+
+            // Rejestr stanów gry i zmiennych operacyjnych
+            State: {
+                selectedVehicleIdx: 0,
+                isEngineRunning: false,
+                keyboard: {},
+                touch: { gas: false, brake: false, left: false, right: false },
+                physics: {
+                    posX: 0,
+                    posZ: 0,
+                    posY: 0,
+                    speedMS: 0,
+                    heading: 0,
+                    steerAngle: 0,
+                    acceleration: 0,
+                    netForce: 0,
+                    dragForce: 0,
+                    rpm: 1000,
+                    currentGear: 1
+                },
+                resources: {
+                    loadedVehicleMesh: null,
+                    particleSystems: []
+                }
             },
-            world: {
-                gridSize: 16,
-                cellSize: 50,
-                buildingDensity: 0.45
-            }
-        };
 
-        // Zmienne systemowe Three.js
-        let scene, camera, renderer, clock;
-        let playerVehicle, remoteVehicle;
-        let inputManager, physicsEngine, audioEngine, networkManager;
-        
-        // Elementy zarządzania ładowaniem zasobów
-        const loadingManager = new THREE.LoadingManager();
-        
-        // Pętla klawiszy
-        const activeKeys = {};
-
-        // ============================================================================
-        // SYSTEM ZARZĄDZANIA WEJŚCIEM (INPUT MANAGER)
-        // ============================================================================
-        class InputManager {
-            constructor() {
-                this.controls = { forward: false, backward: false, left: false, right: false, handbrake: false, cameraToggle: false };
-                this.initListeners();
-            }
-
-            initListeners() {
-                window.addEventListener('keydown', (e) => this.updateKeyState(e, true));
-                window.addEventListener('keyup', (e) => this.updateKeyState(e, false));
-            }
-
-            updateKeyState(e, isPressed) {
-                activeKeys[e.code] = isPressed;
+            // Moduł Renderowania 3D i Sceny Three.js
+            RenderCore: {
+                scene: null,
+                camera: null,
+                renderer: null,
+                lights: {},
+                environmentMeshes: [],
                 
-                switch(e.code) {
-                    case 'KeyW':
-                    case 'ArrowUp':
-                        this.controls.forward = isPressed;
-                        break;
-                    case 'KeyS':
-                    case 'ArrowDown':
-                        this.controls.backward = isPressed;
-                        break;
-                    case 'KeyA':
-                    case 'ArrowLeft':
-                        this.controls.left = isPressed;
-                        break;
-                    case 'KeyD':
-                    case 'ArrowRight':
-                        this.controls.right = isPressed;
-                        break;
-                    case 'Space':
-                        this.controls.handbrake = isPressed;
-                        break;
-                    case 'KeyC':
-                        if (isPressed) this.controls.cameraToggle = !this.controls.cameraToggle;
-                        break;
-                }
-            }
-        }
-
-        // ============================================================================
-        // ZAAWANSOWANY SILNIK FIZYKI MATEMATYCZNEJ (PHYSICS ENGINE)
-        // ============================================================================
-        class PhysicsEngine {
-            constructor() {
-                this.position = new THREE.Vector3(0, 0.1, 0);
-                this.velocity = new THREE.Vector3(0, 0, 0);
-                this.acceleration = new THREE.Vector3(0, 0, 0);
-                this.heading = 0;
-                this.steerAngle = 0;
-                
-                this.speedKMH = 0;
-                this.rpm = CONFIG.engine.idleRpm;
-                this.currentGear = 1;
-                this.isRevLimiterActive = false;
-                this.limiterTimer = 0;
-                
-                this.slipAngle = 0;
-                this.isDrifting = false;
-                this.gForceX = 0;
-                this.gForceY = 0;
-            }
-
-            update(dt, controls) {
-                if (dt > 0.1) dt = 0.1; // Zabezpieczenie przed spadkami klatek
-
-                // 1. Logika Układu Kierowniczego (Aproksymacja Ackermanna)
-                if (controls.left) {
-                    this.steerAngle = Math.min(this.steerAngle + CONFIG.physics.steeringSpeed, CONFIG.physics.maxSteerAngle);
-                } else if (controls.right) {
-                    this.steerAngle = Math.max(this.steerAngle - CONFIG.physics.steeringSpeed, -CONFIG.physics.maxSteerAngle);
-                } else {
-                    // Wycentrowanie kierownicy
-                    this.steerAngle *= 0.75;
-                }
-
-                // Kierunki lokalne wektorów pojazdu
-                const forwardVector = new THREE.Vector3(Math.sin(this.heading), 0, Math.cos(this.heading));
-                const rightVector = new THREE.Vector3(Math.sin(this.heading + Math.PI/2), 0, Math.cos(this.heading + Math.PI/2));
-
-                // Prędkość do przodu i boczna
-                const forwardSpeed = this.velocity.dot(forwardVector);
-                const lateralSpeed = this.velocity.dot(rightVector);
-                this.speedKMH = forwardSpeed * 3.6;
-
-                // 2. Dynamiczna Symulacja Skrzyni i Obrotów Silnika (RPM)
-                if (this.currentGear > 0) {
-                    let calculatedRpm = CONFIG.engine.idleRpm + (Math.abs(this.speedKMH) * CONFIG.engine.gearRatios[this.currentGear] * CONFIG.engine.finalDrive * 2.0);
+                init: function() {
+                    const container = document.getElementById('canvas-viewport');
                     
-                    // Zabezpieczenie limitera (Odcięcie zapłonu)
-                    if (calculatedRpm >= CONFIG.engine.maxRpm) {
-                        this.isRevLimiterActive = true;
-                    }
+                    this.scene = new THREE.Scene();
+                    this.scene.background = new THREE.Color(CoreEngine.Config.Graphics.skyColor);
+                    this.scene.fog = new THREE.FogExp2(CoreEngine.Config.Graphics.skyColor, CoreEngine.Config.Graphics.fogDensity);
 
-                    if (this.isRevLimiterActive) {
-                        this.limiterTimer += dt;
-                        // Praca przerywana zapłonu (0.08 sekundy odcięcia)
-                        this.rpm = CONFIG.engine.redlineRpm + Math.sin(Date.now() * 0.09) * 300;
-                        if (this.limiterTimer > 0.08) {
-                            this.isRevLimiterActive = false;
-                            this.limiterTimer = 0;
-                        }
-                    } else {
-                        this.rpm = Math.min(calculatedRpm, CONFIG.engine.maxRpm);
-                    }
-                }
-
-                // Automatyczna zmiana przełożeń (M_AUTO) oparta na krzywej obrotowej
-                if (!this.isRevLimiterActive && Math.abs(this.speedKMH) >= 0) {
-                    if (this.rpm > CONFIG.engine.redlineRpm && this.currentGear < 5) {
-                        this.currentGear++;
-                    } else if (this.rpm < 1600 && this.currentGear > 1) {
-                        this.currentGear--;
-                    }
-                }
-
-                // 3. Obliczanie sił działających na wektor masy pojazdu
-                const totalForces = new THREE.Vector3();
-
-                // Siła napędowa (Engine Force)
-                if (controls.forward && !this.isRevLimiterActive) {
-                    // Wyznaczanie siły ciągu w oparciu o przełożenie i obroty
-                    let torqueFactor = 1.0 - (this.rpm / CONFIG.engine.maxRpm) * 0.35;
-                    let forceMag = (CONFIG.physics.engineForceMax / CONFIG.engine.gearRatios[this.currentGear]) * torqueFactor;
-                    totalForces.add(forwardVector.clone().multiplyScalar(forceMag));
-                }
-
-                // Hamowanie i bieg wsteczny
-                if (controls.backward) {
-                    if (forwardSpeed > 0.2) {
-                        totalForces.add(forwardVector.clone().multiplyScalar(-CONFIG.physics.brakeForceMax));
-                    } else {
-                        // Cofanie pojazdu
-                        totalForces.add(forwardVector.clone().multiplyScalar(-CONFIG.physics.engineForceMax * 0.4));
-                    }
-                }
-
-                // Hamulec ręczny (Inicjacja poślizgu)
-                if (controls.handbrake) {
-                    this.isDrifting = true;
-                    totalForces.add(forwardVector.clone().multiplyScalar(-CONFIG.physics.handbrakeForce * 0.3 * Math.sign(forwardSpeed)));
-                } else {
-                    if (Math.abs(lateralSpeed) < 1.5) this.isDrifting = false;
-                }
-
-                // Opory aerodynamiczne i opory toczenia (F = Cw * v^2)
-                const airResistance = this.velocity.clone().multiplyScalar(-CONFIG.physics.dragCoeff * this.velocity.length());
-                const rollingResistance = this.velocity.clone().multiplyScalar(-CONFIG.physics.rrCoeff * CONFIG.physics.mass);
-                totalForces.add(airResistance).add(rollingResistance);
-
-                // 4. Integracja Matematyczna (Euler-Cromer)
-                this.acceleration.copy(totalForces).divideScalar(CONFIG.physics.mass);
-                this.velocity.add(this.acceleration.clone().multiplyScalar(dt));
-                this.position.add(this.velocity.clone().multiplyScalar(dt));
-
-                // Zabezpieczenie przed zapadaniem się pod mapę
-                this.position.y = 0.1;
-
-                // 5. Kinematyka boczna opon (Slip Angle & Lateral Force)
-                this.slipAngle = Math.atan2(lateralSpeed, Math.abs(forwardSpeed));
-                
-                // Redukcja boczna pędu (Tarcie opon o nawierzchnię)
-                let lateralFrictionModifier = this.isDrifting ? 0.18 : CONFIG.physics.snappyGrip;
-                const lateralVelocityCancellation = rightVector.clone().multiplyScalar(-lateralSpeed * CONFIG.physics.mass * lateralFrictionModifier);
-                this.velocity.add(lateralVelocityCancellation.multiplyScalar(dt));
-
-                // Rotacja nadwozia na podstawie skrętu kół i pędu
-                if (this.velocity.length() > 0.5) {
-                    let currentHeadingSpeed = this.velocity.dot(forwardVector);
-                    let turningRadiusFactor = this.steerAngle * (currentHeadingSpeed / 15);
-                    this.heading += turningRadiusFactor * dt * (this.isDrifting ? 1.4 : 1.0);
-                }
-
-                // 6. Obliczanie sił odśrodkowych G-Force
-                this.gForceX = (lateralSpeed * forwardSpeed) / (CONFIG.physics.gravity * 8);
-                this.gForceY = this.acceleration.dot(forwardVector) / CONFIG.physics.gravity;
-            }
-        }
-
-        // ============================================================================
-        // SYNTEZATOR AUDIO SILNIKA (AUDIO ENGINE VIA WEB AUDIO API)
-        // ============================================================================
-        class AudioEngine {
-            constructor() {
-                this.ctx = null;
-                this.oscillator = null;
-                this.gainNode = null;
-                this.isInitialized = false;
-
-                // Audio dla pisków opon
-                this.skidOsc = null;
-                this.skidGain = null;
-            }
-
-            init() {
-                try {
-                    const AudioContext = window.AudioContext || window.webkitAudioContext;
-                    this.ctx = new AudioContext();
+                    this.camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1500);
                     
-                    // Budowa łańcucha syntezy silnika
-                    this.oscillator = this.ctx.createOscillator();
-                    this.gainNode = this.ctx.createGain();
-                    
-                    this.oscillator.type = 'sawtooth'; // Agresywny dźwięk mechaniczny
-                    this.oscillator.frequency.value = 60;
-                    this.gainNode.gain.value = 0.0; // Wyciszony na starcie
-                    
-                    // Filtr dolnoprzepustowy nadający głębię basu
-                    const filter = this.ctx.createBiquadFilter();
-                    filter.type = 'lowpass';
-                    filter.frequency.value = 400;
+                    this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance", alpha: false });
+                    this.renderer.setSize(window.innerWidth, window.innerHeight);
+                    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, CoreEngine.Config.Graphics.resolutionCap));
+                    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+                    this.renderer.toneMappingExposure = 1.0;
+                    container.appendChild(this.renderer.domElement);
 
-                    this.oscillator.connect(filter);
-                    filter.connect(this.gainNode);
-                    this.gainNode.connect(this.ctx.destination);
-                    this.oscillator.start(0);
+                    this.setupLighting();
+                    this.setupEnvironment();
+                    this.setupParticleSystem();
 
-                    // Konfiguracja efektu pisków opon (Skid Audio)
-                    this.skidOsc = this.ctx.createOscillator();
-                    this.skidGain = this.ctx.createGain();
-                    this.skidOsc.type = 'triangle';
-                    this.skidOsc.frequency.value = 380;
-                    this.skidGain.gain.value = 0;
-                    
-                    const skidFilter = this.ctx.createBiquadFilter();
-                    skidFilter.type = 'bandpass';
-                    skidFilter.frequency.value = 1200;
+                    window.addEventListener('resize', () => this.handleResize());
+                },
 
-                    this.skidOsc.connect(skidFilter);
-                    skidFilter.connect(this.skidGain);
-                    this.skidGain.connect(this.ctx.destination);
-                    this.skidOsc.start(0);
+                setupLighting: function() {
+                    this.lights.ambient = new THREE.AmbientLight(0x0a192f, 0.6);
+                    this.scene.add(this.lights.ambient);
 
-                    this.isInitialized = true;
-                } catch(e) {
-                    console.warn("Web Audio API nie jest wspierane w tej przeglądarce", e);
-                }
-            }
+                    this.lights.directional = new THREE.DirectionalLight(0x00e5ff, 1.2);
+                    this.lights.directional.position.set(150, 300, 100);
+                    this.scene.add(this.lights.directional);
 
-            update(rpm, isDrifting, speed) {
-                if (!this.isInitialized) return;
-                
-                // Uruchomienie kontekstu audio po interakcji z oknem
-                if (this.ctx.state === 'suspended') {
-                    this.ctx.resume();
-                }
+                    this.lights.cyberRim = new THREE.DirectionalLight(0xff0055, 0.8);
+                    this.lights.cyberRim.position.set(-150, 150, -100);
+                    this.scene.add(this.lights.cyberRim);
 
-                // Mapowanie RPM na częstotliwość dźwięku
-                let targetFreq = 30 + (rpm / CONFIG.engine.maxRpm) * 160;
-                this.oscillator.frequency.setTargetAtTime(targetFreq, this.ctx.currentTime, 0.05);
+                    // Centralny punkt świetlny nad trasą
+                    this.lights.pointGlow = new THREE.PointLight(0x9d4edd, 2, 300);
+                    this.lights.pointGlow.position.set(0, 50, 0);
+                    this.scene.add(this.lights.pointGlow);
+                },
 
-                // Modulacja głośności na podstawie obrotów
-                let targetGain = 0.08 + (rpm / CONFIG.engine.maxRpm) * 0.12;
-                this.gainNode.gain.setTargetAtTime(targetGain, this.ctx.currentTime, 0.05);
+                setupEnvironment: function() {
+                    // Generowanie Cyber Trasy
+                    const gridHelper = new THREE.GridHelper(
+                        CoreEngine.Config.Graphics.gridSize,
+                        CoreEngine.Config.Graphics.gridDivisions,
+                        CoreEngine.Config.Graphics.gridColor,
+                        0x01162b
+                    );
+                    gridHelper.position.y = 0.02;
+                    this.scene.add(gridHelper);
 
-                // Zarządzanie piskami opon
-                if (isDrifting && Math.abs(speed) > 15) {
-                    let targetSkidVolume = Math.min((Math.abs(speed) / 100) * 0.15, 0.2);
-                    this.skidGain.gain.setTargetAtTime(targetSkidVolume, this.ctx.currentTime, 0.03);
-                    this.skidOsc.frequency.setTargetAtTime(350 + Math.random() * 50, this.ctx.currentTime, 0.01);
-                } else {
-                    this.skidGain.gain.setTargetAtTime(0, this.ctx.currentTime, 0.1);
-                }
-            }
-        }
-
-        // ============================================================================
-        // PEER-TO-PEER MULTIPLAYER MANAGER (PEERJS ENGINE)
-        // ============================================================================
-        class NetworkManager {
-            constructor() {
-                this.peer = null;
-                this.conn = null;
-                this.myId = null;
-                this.isConfigured = false;
-                this.lastPingTime = 0;
-            }
-
-            init() {
-                this.peer = new Peer();
-                
-                this.peer.on('open', (id) => {
-                    this.myId = id;
-                    document.getElementById('my-id-box').innerText = `Twoje ID: ${id}`;
-                    document.getElementById('net-status').innerText = "Status: Oczekiwanie na gracza...";
-                });
-
-                this.peer.on('connection', (connection) => {
-                    this.conn = connection;
-                    this.setupEvents();
-                });
-
-                document.getElementById('btn-connect').addEventListener('click', () => {
-                    const connectId = document.getElementById('join-id-input').value.trim();
-                    if (connectId) {
-                        document.getElementById('net-status').innerText = "Status: Nawiązywanie tunelu P2P...";
-                        this.conn = this.peer.connect(connectId);
-                        this.setupEvents();
-                    }
-                });
-            }
-
-            setupEvents() {
-                this.conn.on('open', () => {
-                    document.getElementById('net-status').innerText = "Status: POŁĄCZONO Z KLIENTEM!";
-                    document.getElementById('net-status').style.color = "var(--neon-cyan)";
-                    document.getElementById('ping-display').style.display = "block";
-                    remoteVehicle.visible = true;
-                    
-                    // Rozpoczęcie pętli Ping-Pong
-                    this.sendPing();
-                });
-
-                this.conn.on('data', (data) => {
-                    if (data.type === 'sync') {
-                        remoteVehicle.position.set(data.x, data.y, data.z);
-                        remoteVehicle.rotation.y = data.rotY;
-                    } else if (data.type === 'ping') {
-                        this.conn.send({ type: 'pong' });
-                    } else if (data.type === 'pong') {
-                        let latency = Date.now() - this.lastPingTime;
-                        document.getElementById('ping-display').innerText = `Ping P2P: ${latency} ms`;
-                        setTimeout(() => this.sendPing(), 1000); // Następny pomiar za sekundę
-                    }
-                });
-
-                this.conn.on('close', () => {
-                    document.getElementById('net-status').innerText = "Status: Rozłączono.";
-                    document.getElementById('net-status').style.color = "var(--neon-red)";
-                    remoteVehicle.visible = false;
-                });
-            }
-
-            sendPing() {
-                if (this.conn && this.conn.open) {
-                    this.lastPingTime = Date.now();
-                    this.conn.send({ type: 'ping' });
-                }
-            }
-
-            broadcastState(pos, rotY) {
-                if (this.conn && this.conn.open) {
-                    this.conn.send({
-                        type: 'sync',
-                        x: pos.x,
-                        y: pos.y,
-                        z: pos.z,
-                        rotY: rotY
+                    // Podłoga asfaltowa niska refleksyjność
+                    const floorGeo = new THREE.PlaneGeometry(2000, 2000);
+                    const floorMat = new THREE.MeshStandardMaterial({
+                        color: 0x01050a,
+                        roughness: 0.8,
+                        metalness: 0.2
                     });
+                    const floor = new THREE.Mesh(floorGeo, floorMat);
+                    floor.rotation.x = -Math.PI / 2;
+                    floor.position.y = 0;
+                    this.scene.add(floor);
+
+                    // Proceduralna Generacja Monolitycznego Miasta
+                    const boxGeo = new THREE.BoxGeometry(1, 1, 1);
+                    for (let i = 0; i < CoreEngine.Config.Environment.buildingCount; i++) {
+                        let buildingHeight = 60 + Math.random() * 180;
+                        let buildingWidth = 20 + Math.random() * 35;
+                        let buildingDepth = 20 + Math.random() * 35;
+
+                        let colorPool = [0x00e5ff, 0xff0055, 0x9d4edd, 0x00ff66];
+                        let chosenColor = colorPool[Math.floor(Math.random() * colorPool.length)];
+
+                        const buildingMat = new THREE.MeshStandardMaterial({
+                            color: 0x030b14,
+                            roughness: 0.5,
+                            metalness: 0.8,
+                            emissive: new THREE.Color(chosenColor),
+                            emissiveIntensity: Math.random() * 0.4
+                        });
+
+                        const building = new THREE.Mesh(boxGeo, buildingMat);
+                        building.scale.set(buildingWidth, buildingHeight, buildingDepth);
+
+                        // Rozrzucenie budynków poza główną linią startową pojazdu
+                        let radius = 120 + Math.random() * 400;
+                        let angle = Math.random() * Math.PI * 2;
+
+                        building.position.set(
+                            Math.sin(angle) * radius,
+                            buildingHeight / 2,
+                            Math.cos(angle) * radius
+                        );
+
+                        this.scene.add(building);
+                        this.environmentMeshes.push(building);
+                    }
+                },
+
+                setupParticleSystem: function() {
+                    const pCount = CoreEngine.Config.Environment.particleMax;
+                    const geom = new THREE.BufferGeometry();
+                    const positions = new Float32Array(pCount * 3);
+                    const velocities = [];
+
+                    for(let i=0; i<pCount; i++) {
+                        // Rozproszenie cząstek wzdłuż mapy
+                        positions[i*3] = (Math.random() - 0.5) * 500;
+                        positions[i*3+1] = Math.random() * 25;
+                        positions[i*3+2] = (Math.random() - 0.5) * 500;
+
+                        velocities.push({
+                            x: (Math.random() - 0.5) * 0.1,
+                            y: -Math.random() * 0.05,
+                            z: (Math.random() - 0.5) * 0.1
+                        });
+                    }
+
+                    geom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+                    
+                    const mat = new THREE.PointsMaterial({
+                        color: 0x00e5ff,
+                        size: 0.35,
+                        transparent: true,
+                        opacity: 0.6,
+                        blending: THREE.AdditiveBlending
+                    });
+
+                    const pSystem = new THREE.Points(geom, mat);
+                    this.scene.add(pSystem);
+                    
+                    CoreEngine.State.resources.particleSystems.push({
+                        mesh: pSystem,
+                        data: velocities
+                    });
+                },
+
+                updateParticles: function() {
+                    const sys = CoreEngine.State.resources.particleSystems[0];
+                    if(!sys) return;
+
+                    const positions = sys.mesh.geometry.attributes.position.array;
+                    const vels = sys.data;
+                    const count = CoreEngine.Config.Environment.particleMax;
+
+                    for(let i=0; i<count; i++) {
+                        positions[i*3] += vels[i].x;
+                        positions[i*3+1] += vels[i].y;
+                        positions[i*3+2] += vels[i].z;
+
+                        // Reset wysokości jak spadnie na ziemię
+                        if(positions[i*3+1] < 0) {
+                            positions[i*3+1] = 25;
+                        }
+                    }
+                    sys.mesh.geometry.attributes.position.needsUpdate = true;
+                },
+
+                handleResize: function() {
+                    this.camera.aspect = window.innerWidth / window.innerHeight;
+                    this.camera.projectionMatrix.makePerspective(60, this.camera.aspect, 0.1, 1500);
+                    this.renderer.setSize(window.innerWidth, window.innerHeight);
                 }
-            }
-        }
+            },
 
-        // ============================================================================
-        // PROCEDURALNY GENERATOR ŚWIATA I MIASTA (PROCEDURAL CITY GENERATOR)
-        // ============================================================================
-        class CityGenerator {
-            constructor() {
-                this.materials = {
-                    asphalt: new THREE.MeshStandardMaterial({ color: 0x11161b, roughness: 0.85 }),
-                    sidewalk: new THREE.MeshStandardMaterial({ color: 0x3a444d, roughness: 0.7 }),
-                    building: new THREE.MeshStandardMaterial({ color: 0x0f1b29, roughness: 0.5, metalness: 0.4 }),
-                    windowFace: new THREE.MeshStandardMaterial({ color: 0x05101a, roughness: 0.2 }),
-                    neonOrange: new THREE.MeshBasicMaterial({ color: 0xff9800 }),
-                    neonCyan: new THREE.MeshBasicMaterial({ color: 0x00e5ff })
-                };
-            }
+            // Moduł Ładowania Plików Zewnętrznych GLB / DRACO
+            AssetLoader: {
+                gltfLoader: null,
+                dracoLoader: null,
 
-            generate(scene) {
-                const size = CONFIG.world.gridSize;
-                const cell = CONFIG.world.cellSize;
-                const halfSize = (size * cell) / 2;
+                init: function() {
+                    this.dracoLoader = new THREE.DRACOLoader();
+                    // Oficjalne stabilne repozytorium Google dekodera binarnego Draco
+                    this.dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.4.3/');
+                    
+                    this.gltfLoader = new THREE.GLTFLoader();
+                    this.gltfLoader.setDRACOLoader(this.dracoLoader);
+                },
 
-                // Główna płyta podłoża
-                const baseGeo = new THREE.PlaneGeometry(size * cell * 2, size * cell * 2);
-                const baseFloor = new THREE.Mesh(baseGeo, new THREE.MeshStandardMaterial({ color: 0x070d14, roughness: 0.95 }));
-                baseFloor.rotation.x = -Math.PI / 2;
-                baseFloor.receiveShadow = true;
-                scene.add(baseFloor);
+                loadActiveVehicle: function(vehicleData, callback) {
+                    // Tworzenie siatki tymczasowej (Wired Frame Placeholder)
+                    // Zapobiega błędom braku obiektów i pozwala natychmiast odpalić silnik
+                    let placeholderGeo;
+                    if (vehicleData.type === "scooter") {
+                        placeholderGeo = new THREE.BoxGeometry(0.5, 1.4, 1.6);
+                    } else {
+                        placeholderGeo = new THREE.BoxGeometry(2.1, 1.2, 4.6);
+                    }
 
-                // Pętla generowania siatki miejskiej
-                for (let x = -size/2; x < size/2; x++) {
-                    for (let z = -size/2; z < size/2; z++) {
+                    const placeholderMat = new THREE.MeshStandardMaterial({
+                        color: 0x00e5ff,
+                        wireframe: true,
+                        emissive: 0x00e5ff,
+                        emissiveIntensity: 0.5
+                    });
+
+                    const fallbackMesh = new THREE.Mesh(placeholderGeo, placeholderMat);
+                    fallbackMesh.position.y = vehicleData.type === "scooter" ? 0.7 : 0.6;
+                    
+                    // Przypisanie obiektu tymczasowego
+                    CoreEngine.RenderCore.scene.add(fallbackMesh);
+                    CoreEngine.State.resources.loadedVehicleMesh = fallbackMesh;
+
+                    // Wywołanie asynchronicznego ładowania Twoich plików lokalnych z dysku serwera
+                    console.log(`Zgłoszenie żądania IO dla pliku: ./${vehicleData.file}`);
+                    
+                    this.gltfLoader.load(
+                        `./${vehicleData.file}`,
+                        (gltf) => {
+                            // Sukces ładowania: Podmiana klocka na Twoją siatkę high-poly/low-poly
+                            CoreEngine.RenderCore.scene.remove(fallbackMesh);
+                            
+                            CoreEngine.State.resources.loadedVehicleMesh = gltf.scene;
+                            
+                            // Przejście po dzieciach modelu w celu włączenia rzucania cieni
+                            gltf.scene.traverse((node) => {
+                                if (node.isMesh) {
+                                    node.castShadow = true;
+                                    node.receiveShadow = true;
+                                }
+                            });
+
+                            CoreEngine.RenderCore.scene.add(gltf.scene);
+                            console.log(`Zasób ./${vehicleData.file} pomyślnie zmapowany w pamięci GPU.`);
+                            CoreEngine.UIManager.pushNotification(`Wczytano model: ${vehicleData.name}`);
+                            if(callback) callback();
+                        },
+                        (xhr) => {
+                            let percentage = (xhr.loaded / xhr.total * 100);
+                            console.log(`Ładowanie kontenera GLB: ${percentage.toFixed(1)}%`);
+                        },
+                        (error) => {
+                            // Obsługa braku pliku na dysku lokalnym – brak crashu aplikacji
+                            console.warn(`Brak fizycznego pliku ./${vehicleData.file} w katalogu głównym serwera web. Silnik utrzymał bezpieczną siatkę wektorową.`);
+                            CoreEngine.UIManager.pushNotification(`Używam siatki zastępczej dla ${vehicleData.name}`);
+                            if(callback) callback();
+                        }
+                    );
+                }
+            },
+
+            // ZABEZPIECZONY MATEMATYCZNIE SYSTEM SYMULACJI FIZYKI STRUKTURALNEJ Pojazdów
+            PhysicsCore: {
+                update: function(dt) {
+                    const data = CoreEngine.Database[CoreEngine.State.selectedVehicleIdx];
+                    const state = CoreEngine.State.physics;
+                    const input = CoreEngine.State.keyboard;
+                    const touch = CoreEngine.State.touch;
+
+                    // 1. Zbiór stanów wejścia
+                    let pedalGas = input['KeyW'] || input['ArrowUp'] || touch.gas;
+                    let pedalBrake = input['KeyS'] || input['ArrowDown'] || touch.brake;
+                    let steerLeft = input['KeyA'] || input['ArrowLeft'] || touch.left;
+                    let steerRight = input['KeyD'] || input['ArrowRight'] || touch.right;
+
+                    // 2. Obsługa układu kierowniczego (Zależna od prędkości)
+                    // Zapobiega nienaturalnym obrotom przy prędkościach naddźwiękowych
+                    let currentSteerLimit = data.maxSteerAngle;
+                    if(Math.abs(state.speedMS) > 10) {
+                        // Im szybciej jedziesz, tym trudniej gwałtownie skręcić kierownicę
+                        currentSteerLimit = data.maxSteerAngle * (15 / (Math.abs(state.speedMS) + 5));
+                    }
+
+                    if (steerLeft) {
+                        state.steerAngle = Math.min(state.steerAngle + data.steerSpeed, currentSteerLimit);
+                    } else if (steerRight) {
+                        state.steerAngle = Math.max(state.steerAngle - data.steerSpeed, -currentSteerLimit);
+                    } else {
+                        // Automatyczne prostowanie kół
+                        if (state.steerAngle > 0) {
+                            state.steerAngle = Math.max(state.steerAngle - data.returnSpeed, 0);
+                        } else if (state.steerAngle < 0) {
+                            state.steerAngle = Math.min(state.steerAngle + data.returnSpeed, 0);
+                        }
+                    }
+
+                    // 3. Obliczanie Siły Napędowej Silnika
+                    let engineForce = 0;
+                    if (pedalGas) {
+                        // Symulacja spadku momentu obrotowego na wyższych obrotach i biegach
+                        let rpmFactor = 1.0;
+                        if(state.rpm > 5000) {
+                            rpmFactor = 1.0 - ((state.rpm - 5000) / 2500) * 0.4;
+                        }
+                        engineForce = data.maxForce * rpmFactor;
+                    }
+
+                    let brakingForce = 0;
+                    if (pedalBrake) {
+                        brakingForce = data.maxForce * 1.2 * (state.speedMS > 0 ? 1 : -1);
+                    }
+
+                    // 4. Zaawansowane matematyczne opory blokujące błędy kwantowe prędkości
+                    // Opór Powietrza: F_drag = 0.5 * rho * Cd * A * v²
+                    let sign = state.speedMS >= 0 ? 1 : -1;
+                    state.dragForce = 0.5 * CoreEngine.Config.Environment.airDensity * data.dragCoeff * (state.speedMS * state.speedMS) * sign;
+
+                    // Opór Toczenia Opon
+                    let rollingResistance = 0.018 * data.mass * CoreEngine.Config.Environment.gravity * (Math.abs(state.speedMS) > 0.1 ? sign : 0);
+
+                    // Całkowity bilans wektora sił na osi podłużnej pojazdu
+                    state.netForce = engineForce - brakingForce - state.dragForce - rollingResistance;
+
+                    // Przyspieszenie z Drugiej Zasady Dynamiki Newtona: a = F / m
+                    state.acceleration = state.netForce / data.mass;
+
+                    // Zmiana prędkości: v = v + a * dt
+                    state.speedMS += state.acceleration * dt;
+
+                    // ABSOLUTNY REJESTR I LIMITER PRĘDKOŚCI MAKSYMALNEJ (SZTYWNA BARIERA BEZPIECZEŃSTWA)
+                    let absoluteTopSpeedMS = data.maxSpeed / 3.6;
+                    if (state.speedMS > absoluteTopSpeedMS) state.speedMS = absoluteTopSpeedMS;
+                    
+                    // Ograniczenie prędkości biegu wstecznego
+                    let absoluteMaxReverseMS = -28 / 3.6;
+                    if (state.speedMS < absoluteMaxReverseMS) state.speedMS = absoluteMaxReverseMS;
+
+                    // Tłumienie drgań resztkowych (Hamulec postojowy przy minimalnej prędkości)
+                    if (!pedalGas && !pedalBrake && Math.abs(state.speedMS) < 0.15) {
+                        state.speedMS = 0;
+                        state.acceleration = 0;
+                        state.netForce = 0;
+                    }
+
+                    // 5. Kinematyczny model skrętu pojazdu (Model Ackermanna uproszczony do środka masy)
+                    if (Math.abs(state.speedMS) > 0.1) {
+                        let turningRadiusModifier = state.speedMS > 0 ? 1 : -1;
+                        // Kąt obrotu pojazdu modyfikowany przez rozstaw osi i kąt skrętu kół
+                        state.heading += (state.speedMS / data.wheelBase) * Math.sin(state.steerAngle) * dt * turningRadiusModifier;
+                    }
+
+                    // 6. Przełożenie wektorowe prędkości liniowej na współrzędne kartezjańskie 3D sceny
+                    state.posX += Math.sin(state.heading) * state.speedMS * dt;
+                    state.posZ += Math.cos(state.heading) * state.speedMS * dt;
+
+                    // 7. Dynamiczna Matematyka Obrotów Silnika (RPM) i Skrzyni Biegów
+                    let currentSpeedKMH = Math.abs(state.speedMS) * 3.6;
+                    
+                    if (data.type === "car") {
+                        // Automatyczna sekwencyjna zmiana biegów pod obciążeniem
+                        let lastGear = state.currentGear;
                         
-                        const posX = x * cell + cell/2;
-                        const posZ = z * cell + cell/2;
-
-                        // Wyznaczenie krzyżujących się korytarzy równego asfaltu (dróg miejskich)
-                        if (x === 0 || z === 0 || x % 3 === 0 || z % 3 === 0) {
-                            this.createRoadSegment(scene, posX, posZ, cell);
+                        if (currentSpeedKMH < 1) {
+                            state.currentGear = 1;
+                        } else if (currentSpeedKMH > 1 && currentSpeedKMH < 45) {
+                            state.currentGear = 1;
+                        } else if (currentSpeedKMH >= 45 && currentSpeedKMH < 85) {
+                            state.currentGear = 2;
+                        } else if (currentSpeedKMH >= 85 && currentSpeedKMH < 130) {
+                            state.currentGear = 3;
+                        } else if (currentSpeedKMH >= 130 && currentSpeedKMH < 180) {
+                            state.currentGear = 4;
+                        } else if (currentSpeedKMH >= 180 && currentSpeedKMH < 230) {
+                            state.currentGear = 5;
                         } else {
-                            // Pozostałe kwartały siatki wypełniamy chodnikiem i wieżowcami
-                            this.createBuildingBlock(scene, posX, posZ, cell);
+                            state.currentGear = Math.min(6, data.gearsCount);
                         }
-                    }
-                }
-                
-                // Oświetlenie uliczne (Latarnie miejskie) na głównych trasach
-                this.spawnStreetLights(scene);
-            }
 
-            createRoadSegment(scene, x, z, size) {
-                const roadGeo = new THREE.PlaneGeometry(size, size);
-                const road = new THREE.Mesh(roadGeo, this.materials.asphalt);
-                road.rotation.x = -Math.PI / 2;
-                road.position.set(x, 0.01, z);
-                road.receiveShadow = true;
-                scene.add(road);
+                        if(state.currentGear !== lastGear) {
+                            CoreEngine.UIManager.pushNotification(`Bieg podniesiony do: E_GEAR_${state.currentGear}`);
+                        }
 
-                // Teksturowanie pasów ruchu metodą geometryczną
-                const lineGeo = new THREE.PlaneGeometry(2, 0.3);
-                const line = new THREE.Mesh(lineGeo, new THREE.MeshBasicMaterial({ color: 0xffffff }));
-                line.rotation.x = -Math.PI / 2;
-                line.position.set(x, 0.02, z);
-                scene.add(line);
-            }
-
-            createBuildingBlock(scene, x, z, size) {
-                // Podstawa chodnika pod budynkiem
-                const sideGeo = new THREE.BoxGeometry(size - 4, 0.2, size - 4);
-                const sidewalk = new THREE.Mesh(sideGeo, this.materials.sidewalk);
-                sidewalk.position.set(x, 0.1, z);
-                sidewalk.receiveShadow = true;
-                scene.add(sidewalk);
-
-                // Losowanie decyzji o wysokości budynku z parametru gęstości
-                if (Math.random() < CONFIG.world.buildingDensity) {
-                    const bHeight = 15 + Math.random() * 45;
-                    const bWidth = size - 12;
-                    
-                    const bGeo = new THREE.BoxGeometry(bWidth, bHeight, bWidth);
-                    const building = new THREE.Mesh(bGeo, this.materials.building);
-                    building.position.set(x, bHeight / 2 + 0.2, z);
-                    building.castShadow = true;
-                    building.receiveShadow = true;
-                    scene.add(building);
-
-                    // Proceduralne świecące paski neonów na krawędziach wieżowca
-                    this.applyNeonTrim(scene, x, z, bWidth, bHeight);
-                }
-            }
-
-            applyNeonTrim(scene, x, z, w, h) {
-                const trimGeo = new THREE.BoxGeometry(0.4, h, 0.4);
-                const mat = Math.random() > 0.5 ? this.materials.neonCyan : this.materials.neonOrange;
-                
-                const trim1 = new THREE.Mesh(trimGeo, mat);
-                trim1.position.set(x - w/2, h/2 + 0.2, z - w/2);
-                scene.add(trim1);
-
-                const trim2 = new THREE.Mesh(trimGeo, mat);
-                trim2.position.set(x + w/2, h/2 + 0.2, z + w/2);
-                scene.add(trim2);
-            }
-
-            spawnStreetLights(scene) {
-                for (let i = -200; i <= 200; i += 50) {
-                    if (i === 0) continue;
-                    this.createLightPole(scene, i, 5);
-                    this.createLightPole(scene, 5, i);
-                }
-            }
-
-            createLightPole(scene, x, z) {
-                const poleGroup = new THREE.Group();
-                poleGroup.position.set(x, 0, z);
-
-                const poleGeo = new THREE.CylinderGeometry(0.1, 0.15, 6, 8);
-                const pole = new THREE.Mesh(poleGeo, this.materials.sidewalk);
-                pole.position.y = 3;
-                poleGroup.add(pole);
-
-                const lampGeo = new THREE.BoxGeometry(0.8, 0.2, 0.4);
-                const lamp = new THREE.Mesh(lampGeo, this.materials.windowFace);
-                lamp.position.set(0.3, 6, 0);
-                poleGroup.add(lamp);
-
-                // Fizyczny emiter światła Three.js dający nocny efekt gry
-                const pointLight = new THREE.PointLight(0xffea00, 0.9, 18, 1.5);
-                pointLight.position.set(0.3, 5.8, 0);
-                poleGroup.add(pointLight);
-
-                scene.add(poleGroup);
-            }
-        }
-
-        // ============================================================================
-        // INITIALIZATION AND ASSET MANAGEMENT (LOADER)
-        // ============================================================================
-        function initEngine() {
-            // Inicjalizacja zegara systemowego klatek renderera
-            clock = new THREE.Clock();
-
-            // Powołanie instancji obiektów systemów peryferyjnych
-            inputManager = new InputManager();
-            physicsEngine = new PhysicsEngine();
-            audioEngine = new AudioEngine();
-            networkManager = new NetworkManager();
-
-            // Definicja sceny 3D
-            scene = new THREE.Scene();
-            scene.fog = new THREE.FogExp2(0x0a1118, 0.0035);
-
-            // Kamera
-            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 2048);
-
-            // Wybór i konfiguracja silnika renderującego WebGL
-            renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-            renderer.shadowMap.enabled = true;
-            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-            document.getElementById('canvas-container').appendChild(renderer.domElement);
-
-            // Doświetlenie globalne sceny (Ambient + directional)
-            const ambient = new THREE.AmbientLight(0xffffff, 0.22);
-            scene.add(ambient);
-
-            const sunLight = new THREE.DirectionalLight(0xaaccff, 0.4);
-            sunLight.position.set(250, 400, 150);
-            sunLight.castShadow = true;
-            sunLight.shadow.mapSize.width = 1024;
-            sunLight.shadow.mapSize.height = 1024;
-            scene.add(sunLight);
-
-            // Budowa struktur proceduralnych miasta
-            const city = new CityGenerator();
-            city.generate(scene);
-
-            // Budowanie geometrii pojazdów gracza i przeciwnika sieciowego
-            buildVehicles();
-
-            // Konfiguracja Menadżera Ładowania zasobów zewnętrznych (.obj / .mtl)
-            setupAssetLoader();
-
-            // Integracja zdarzeń przeglądarki
-            window.addEventListener('resize', onWindowResize);
-            document.body.addEventListener('click', () => {
-                if(!audioEngine.isInitialized) {
-                    audioEngine.init();
-                }
-            });
-
-            // Uruchomienie sieci P2P PeerJS
-            networkManager.init();
-
-            // Ukrycie interfejsu ładowania początkowego systemu po wygenerowaniu struktur
-            setTimeout(() => {
-                document.getElementById('loader-overlay').style.display = 'none';
-            }, 1200);
-
-            // Skok do pętli głównej silnika
-            renderLoop();
-        }
-
-        function buildVehicles() {
-            // Tworzenie geometrii lokalnego gracza
-            playerVehicle = createFallbackGeometry(0x0d1117); // Sportowa czerń satynowa
-            scene.add(playerVehicle);
-
-            // Geometria gracza zdalnego w pokoju multiplayer
-            remoteVehicle = createFallbackGeometry(0xd90429); // Sportowa czerń czerwona
-            remoteVehicle.visible = false;
-            scene.add(remoteVehicle);
-        }
-
-        function createFallbackGeometry(colorHex) {
-            const containerGroup = new THREE.Group();
-            
-            const bodyMat = new THREE.MeshStandardMaterial({ color: colorHex, roughness: 0.2, metalness: 0.8 });
-            const wheelMat = new THREE.MeshStandardMaterial({ color: 0x14191f, roughness: 0.85 });
-            const glassMat = new THREE.MeshStandardMaterial({ color: 0x00e5ff, transparent: true, opacity: 0.55 });
-            const neonOrangeMat = new THREE.MeshBasicMaterial({ color: 0xff9800 });
-
-            // Podwozie / Konstrukcja dolna ramy pojazdu
-            const chasis = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.4, 4.2), bodyMat);
-            chasis.position.y = 0.4;
-            chasis.castShadow = true;
-            chasis.receiveShadow = true;
-            containerGroup.add(chasis);
-
-            // Nadwozie / Struktura kabiny pasażerskiej
-            const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.6, 2.2), glassMat);
-            cabin.position.set(0, 0.9, -0.2);
-            cabin.castShadow = true;
-            containerGroup.add(cabin);
-
-            // Elementy ozdobne (Pomarańczowe panele nawiązujące do hulajnogi Kamikaze)
-            const trimLeft = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.2, 1.5), neonOrangeMat);
-            trimLeft.position.set(-0.96, 0.4, 0);
-            containerGroup.add(trimLeft);
-
-            const trimRight = trimLeft.clone();
-            trimRight.position.x = 0.96;
-            containerGroup.add(trimRight);
-
-            // Koła jezdne (Masywne, terenowe)
-            const wGeo = new THREE.CylinderGeometry(0.45, 0.45, 0.45, 32);
-            const wPositions = [
-                [-1.0, 0.45, 1.3],  // Przód Lewy
-                [1.0, 0.45, 1.3],   // Przód Prawy
-                [-1.0, 0.45, -1.3], // Tył Lewy
-                [1.0, 0.45, -1.3]   // Tył Prawy
-            ];
-
-            wPositions.forEach((pos, index) => {
-                const wheelMesh = new THREE.Mesh(wGeo, wheelMat);
-                wheelMesh.rotation.z = Math.PI / 2;
-                wheelMesh.position.set(pos[0], pos[1], pos[2]);
-                wheelMesh.castShadow = true;
-                // Nadanie nazw węzłom koła w celu ich późniejszego obracania/skręcania animacyjnego
-                wheelMesh.name = `wheel_${index}`;
-                containerGroup.add(wheelMesh);
-            });
-
-            return containerGroup;
-        }
-
-        // ============================================================================
-        // INTEGRACJA MODELI OBJ/MTL OD AI (KAMIKAZE SCOOTER LOADER)
-        // ============================================================================
-        function setupAssetLoader() {
-            loadingManager.onProgress = function (item, loaded, total) {
-                let progress = (loaded / total) * 100;
-                document.getElementById('progress-bar').style.width = progress + '%';
-            };
-
-            loadingManager.onLoad = function () {
-                console.log("Wszystkie tekstury i modele 3D zostały poprawnie wczytane.");
-            };
-
-            // INSTALATOR PLIKÓW OBJ/MTL
-            // Jeśli wygenerowałeś hulajnogę o nazwie "scooter.obj" oraz "scooter.mtl", 
-            // wrzuć je do tego samego katalogu i odkomentuj poniższe wywołanie funkcji:
-            
-            // injectCustomOBJModel('scooter.mtl', 'scooter.obj');
-        }
-
-        function injectCustomOBJModel(mtlUrl, objUrl) {
-            document.getElementById('loader-overlay').style.display = 'flex';
-            document.getElementById('loader-text').innerText = "Wczytywanie geometrii wygenerowanej przez AI...";
-
-            const mtlLoader = new THREE.MTLLoader(loadingManager);
-            mtlLoader.load(mtlUrl, (materials) => {
-                materials.preload();
-                
-                const objLoader = new THREE.OBJLoader(loadingManager);
-                objLoader.setMaterials(materials);
-                objLoader.load(objUrl, (object3D) => {
-                    
-                    // Usunięcie domyślnej geometrii zastępczej z kontenera gracza
-                    while(playerVehicle.children.length > 0) { 
-                        playerVehicle.remove(playerVehicle.children[0]); 
+                        // Wzór na obroty silnika sprzężone z kołami pojazdu przez przełożenia
+                        let gearRatio = data.gearRatios[state.currentGear];
+                        state.rpm = 1000 + (currentSpeedKMH * gearRatio * data.finalDrive * 1.8);
+                        
+                    } else {
+                        // Specyfikacja bezstopniowa (Twoja hulajnoga elektryczna Kamikaze K1)
+                        state.currentGear = 1;
+                        let speedRatio = currentSpeedKMH / data.maxSpeed;
+                        state.rpm = 1000 + (speedRatio * 5200);
                     }
 
-                    // Skalowanie, orientacja osi obrotu i wycentrowanie modelu hulajnogi na siatce fizyki
-                    object3D.scale.set(0.6, 0.6, 0.6);
-                    object3D.position.set(0, 0, 0);
-                    object3D.traverse((node) => {
-                        if (node.isMesh) {
-                            node.castShadow = true;
-                            node.receiveShadow = true;
-                        }
+                    // Zabezpieczenie przed przekroczeniem odcięcia obrotów (Rev Limiter)
+                    if (state.rpm > 6800) state.rpm = 6500 + (Math.random() * 200 - 100); 
+                    if (state.rpm < 950) state.rpm = 950;
+
+                    // Synchronizacja danych wyjściowych z układem interfejsu diagnostycznego HUD
+                    CoreEngine.UIManager.renderHUD(currentSpeedKMH, state.rpm, state.currentGear, state);
+                }
+            },
+
+            // Moduł Zarządzania Widokami Interfejsu i Elementami DOM
+            UIManager: {
+                init: function() {
+                    this.buildGarageMenu();
+                    this.clockInterval = setInterval(() => {
+                        const d = new Date();
+                        document.getElementById('hud-core-clock').innerText = d.toTimeString().split(' ')[0];
+                    }, 1000);
+                },
+
+                buildGarageMenu: function() {
+                    const grid = document.getElementById('dom-garage-grid');
+                    grid.innerHTML = ""; // Czyszczenie kontenera
+
+                    CoreEngine.Database.forEach((veh, index) => {
+                        const card = document.createElement('div');
+                        card.className = `vehicle-card ${index === 0 ? 'active' : ''}`;
+                        card.id = `veh-card-id-${index}`;
+                        card.setAttribute('onclick', `CoreEngine.UIManager.selectCard(${index})`);
+
+                        card.innerHTML = `
+                            <div class="card-header">
+                                <span class="card-title">${veh.name}</span>
+                                <span class="card-file">${veh.file}</span>
+                            </div>
+                            <div class="card-desc">
+                                Definiuje zasób dynamiczny ładowany z mapy kontenera. Konstrukcja zoptymalizowana pod renderowanie w czasie rzeczywistym.
+                            </div>
+                            <div class="card-specs">
+                                <div class="spec-item">MASA: <strong>${veh.mass} kg</strong></div>
+                                <div class="spec-item">V-MAX: <strong>${veh.maxSpeed} km/h</strong></div>
+                                <div class="spec-item">KLASA: <strong>${veh.type.toUpperCase()}</strong></div>
+                            </div>
+                        `;
+                        grid.appendChild(card);
                     });
+                },
 
-                    playerVehicle.add(object3D);
-                    document.getElementById('loader-overlay').style.display = 'none';
-                });
-            });
-        }
-
-        // ============================================================================
-        // CYKLICZNA PĘTLA DYNAMICZNA RENDERINGU (MAIN LOOP ENGINE)
-        // ============================================================================
-        function renderLoop() {
-            requestAnimationFrame(renderLoop);
-
-            // Wyznaczanie czasu delty deltatime pomiędzy klatkami
-            const dt = clock.getDelta();
-
-            // Krok obliczeniowy fizyki pojazdu lokalnego
-            physicsEngine.update(dt, inputManager.controls);
-
-            // Aktualizacja współrzędnych węzła graficznego transformacji Three.js
-            playerVehicle.position.copy(physicsEngine.position);
-            playerVehicle.rotation.y = physicsEngine.heading;
-
-            // Animacja obrotowa kół na podstawie obliczeń prędkości oraz skręcania kierownicy
-            animateVehicleWheels(dt);
-
-            // Aktualizacja strumienia audio
-            audioEngine.update(physicsEngine.rpm, physicsEngine.isDrifting, physicsEngine.speedKMH);
-
-            // Transmisja stanów pozycyjnych przez sieć do drugiego klienta
-            networkManager.broadcastState(playerVehicle.position, playerVehicle.rotation.y);
-
-            // Renderowanie interfejsu użytkownika (HUD Telemetria)
-            updateUserInterface();
-
-            // Pozycjonowanie kamery (System śledzenia TPP / FPP)
-            updateCameraPosition();
-
-            // Render klatki sceny 3D
-            renderer.render(scene, camera);
-        }
-
-        function animateVehicleWheels(dt) {
-            // Rotacja kół na osiach obrotu przy ruchu postępowym pojazdu
-            const rotationSpeed = (physicsEngine.speedKMH / 3.6) / 0.45; // v / r
-            
-            playerVehicle.traverse((child) => {
-                if (child.isMesh && child.name.startsWith('wheel_')) {
-                    child.rotation.x += rotationSpeed * dt;
-                    
-                    // Dodatkowy kąt skrętu dla kół przednich (indeksy 0 i 1)
-                    if (child.name === 'wheel_0' || child.name === 'wheel_1') {
-                        child.rotation.y = physicsEngine.steerAngle;
+                selectCard: function(index) {
+                    CoreEngine.State.selectedVehicleIdx = index;
+                    const allCards = document.getElementsByClassName('vehicle-card');
+                    for(let i=0; i<allCards.length; i++) {
+                        allCards[i].classList.remove('active');
                     }
+                    document.getElementById(`veh-card-id-${index}`).classList.add('active');
+                },
+
+                pushNotification: function(text) {
+                    const el = document.getElementById('core-notification');
+                    el.innerText = text;
+                    el.style.opacity = '1';
+                    setTimeout(() => {
+                        el.style.opacity = '0';
+                    }, 2500);
+                },
+
+                renderHUD: function(speedKMH, rpm, gear, fullState) {
+                    // Update wskaźników cyfrowych
+                    document.getElementById('hud-speed-val').innerText = Math.round(speedKMH);
+                    document.getElementById('hud-rpm-val').innerText = `${Math.round(rpm)} RPM`;
+                    document.getElementById('hud-gear-val').innerText = gear;
+
+                    // Update paska obrotów silnika
+                    const bar = document.getElementById('hud-rpm-bar');
+                    let rpmPercent = ((rpm - 1000) / 5800) * 100;
+                    bar.style.width = `${Math.min(100, Math.max(0, rpmPercent))}%`;
+
+                    if(rpm > 5500) {
+                        bar.classList.add('rpm-warn');
+                    } else {
+                        bar.classList.remove('rpm-warn');
+                    }
+
+                    // Uzupełnienie Macierzy Diagnostycznej (Profiler po prawej stronie)
+                    document.getElementById('mat-x').innerText = fullState.posX.toFixed(2);
+                    document.getElementById('mat-z').innerText = fullState.posZ.toFixed(2);
+                    document.getElementById('mat-head').innerText = `${fullState.heading.toFixed(3)} rad`;
+                    document.getElementById('mat-acc').innerText = `${fullState.acceleration.toFixed(2)} m/s²`;
+                    document.getElementById('mat-force').innerText = `${fullState.netForce.toFixed(0)} N`;
+                    document.getElementById('mat-drag').innerText = `${fullState.dragForce.toFixed(0)} N`;
+                    document.getElementById('mat-steer').innerText = fullState.steerAngle.toFixed(3);
+                    
+                    let momentum = CoreEngine.Database[CoreEngine.State.selectedVehicleIdx].mass * fullState.speedMS;
+                    document.getElementById('momentum') ? document.getElementById('momentum').innerText = Math.round(momentum) : null;
                 }
-            });
-        }
+            },
 
-        function updateUserInterface() {
-            // Aktualizacja zmiennych numerycznych HUD
-            document.getElementById('hud-speed').innerText = Math.round(Math.abs(physicsEngine.speedKMH));
-            document.getElementById('hud-gear').innerText = physicsEngine.currentGear === 'R' ? 'R' : physicsEngine.currentGear;
-            
-            const numericRpmBox = document.getElementById('hud-rpm-numeric');
-            numericRpmBox.innerText = `${Math.round(physicsEngine.rpm)} RPM`;
+            // System Powiązań Zdarzeń i Obsługi Kontrolerów Mobilnych (Moto G85)
+            InputBinding: {
+                init: function() {
+                    // Blokowanie domyślnych zachowań dotyku na smartfonach
+                    const touchOverlay = document.getElementById('mobile-touch-overlay');
+                    touchOverlay.addEventListener('contextmenu', (e) => e.preventDefault());
 
-            // Zarządzanie paskiem obrotomierza Tacho
-            const tachoBar = document.getElementById('tacho-bar');
-            const rpmPercentage = (physicsEngine.rpm / CONFIG.engine.maxRpm) * 100;
-            tachoBar.style.width = `${rpmPercentage}%`;
+                    this.bindTouchButton('btn-touch-gas', 'gas');
+                    this.bindTouchButton('btn-touch-brake', 'brake');
+                    this.bindTouchButton('btn-touch-left', 'left');
+                    this.bindTouchButton('btn-touch-right', 'right');
+                },
 
-            if (physicsEngine.isRevLimiterActive || physicsEngine.rpm > CONFIG.engine.redlineRpm) {
-                numericRpmBox.className = "rev-limiter";
-            } else {
-                numericRpmBox.className = "";
+                bindTouchButton: function(elementId, stateKey) {
+                    const element = document.getElementById(elementId);
+                    if(!element) return;
+
+                    element.addEventListener('touchstart', (e) => {
+                        e.preventDefault();
+                        CoreEngine.State.touch[stateKey] = true;
+                    }, { passive: false });
+
+                    element.addEventListener('touchend', (e) => {
+                        e.preventDefault();
+                        CoreEngine.State.touch[stateKey] = false;
+                    }, { passive: false });
+                }
+            },
+
+            // Główny Koordynator Cyklu Życia Aplikacji
+            SystemManager: {
+                physicsAccumulator: 0.0,
+                lastTimeStamp: 0,
+
+                init: function() {
+                    console.log("Inicjalizacja monolitycznego rdzenia CyberCore Engine...");
+                    CoreEngine.RenderCore.init();
+                    CoreEngine.AssetLoader.init();
+                    CoreEngine.UIManager.init();
+                    CoreEngine.InputBinding.init();
+                },
+
+                bootSequence: function() {
+                    // Wyłączenie menu i aktywacja paneli in-game
+                    document.getElementById('ui-container').style.display = 'none';
+                    document.getElementById('hud-master-container').style.display = 'block';
+                    document.getElementById('telemetry-matrix').style.display = 'block';
+                    document.getElementById('hud-car-name').innerText = CoreEngine.Database[CoreEngine.State.selectedVehicleIdx].name;
+
+                    const activeVehicleData = CoreEngine.Database[CoreEngine.State.selectedVehicleIdx];
+
+                    // Wywołanie modułu ładowania modeli dla wybranego elementu
+                    CoreEngine.AssetLoader.loadActiveVehicle(activeVehicleData, () => {
+                        // Callback po ukończeniu ładowania siatki lub fallbacku - Odpalenie pętli renderowania
+                        CoreEngine.State.isEngineRunning = true;
+                        CoreEngine.SystemManager.lastTimeStamp = performance.now();
+                        requestAnimationFrame((timestamp) => CoreEngine.SystemManager.mainLoop(timestamp));
+                    });
+                },
+
+                // Pętla Główna Gry zapobiegająca lagom fizyki (Fixed TimeStep Loop)
+                mainLoop: function(currentTimestamp) {
+                    if (!CoreEngine.State.isEngineRunning) return;
+
+                    requestAnimationFrame((ts) => CoreEngine.SystemManager.mainLoop(ts));
+
+                    // Wyliczanie delty delta-time
+                    let deltaSeconds = (currentTimestamp - this.lastTimeStamp) / 1000;
+                    this.lastTimeStamp = currentTimestamp;
+
+                    // Ochrona przed "Spiralą Śmierci" procesora w tle
+                    if (deltaSeconds > CoreEngine.Config.TimeStep.maxAccumulator) {
+                        deltaSeconds = CoreEngine.Config.TimeStep.maxAccumulator;
+                    }
+
+                    this.physicsAccumulator += deltaSeconds;
+
+                    // Wykonanie tylu kroków fizycznych, ile zmieści się w zakumulowanym czasie
+                    while (this.physicsAccumulator >= CoreEngine.Config.TimeStep.fixedDelta) {
+                        CoreEngine.PhysicsCore.update(CoreEngine.Config.TimeStep.fixedDelta);
+                        this.physicsAccumulator -= CoreEngine.Config.TimeStep.fixedDelta;
+                    }
+
+                    // Klatka animacji graficznej środowiska Three.js
+                    this.updateGraphicsFrame();
+                },
+
+                updateGraphicsFrame: function() {
+                    const state = CoreEngine.State.physics;
+                    const mesh = CoreEngine.State.resources.loadedVehicleMesh;
+                    const data = CoreEngine.Database[CoreEngine.State.selectedVehicleIdx];
+
+                    // Aktualizacja pozycji modelu pojazdu na bazie obliczeń wektora fizycznego
+                    if (mesh) {
+                        mesh.position.set(state.posX, state.posY, state.posZ);
+                        mesh.rotation.y = state.heading;
+
+                        // Unikalny ficzer graficzny: Pochylenie ramy hulajnogi Kamikaze K1 w trakcie ciasnych zakrętów
+                        if (data.type === "scooter") {
+                            let factor = Math.min(Math.abs(state.speedMS) / 15, 1.0);
+                            mesh.rotation.z = -state.steerAngle * 0.45 * factor;
+                        } else {
+                            mesh.rotation.z = 0; // Samochody nie pochylają się na boki w osi Z
+                        }
+                    }
+
+                    // Gładka, płynna praca kamery TPP za pojazdem (Interpolacja liniowa LERP)
+                    const targetDistance = data.camDistance;
+                    const targetHeight = data.camHeight;
+
+                    // Wyliczanie pozycji docelowej z przesunięciem o kąt obrotu maszyny
+                    let targetCamX = state.posX - Math.sin(state.heading) * targetDistance;
+                    let targetCamZ = state.posZ - Math.cos(state.heading) * targetDistance;
+                    let targetCamY = state.posY + targetHeight;
+
+                    // Wygładzanie ruchu kamery w trzech osiach
+                    CoreEngine.RenderCore.camera.position.x += (targetCamX - CoreEngine.RenderCore.camera.position.x) * 0.08;
+                    CoreEngine.RenderCore.camera.position.z += (targetCamZ - CoreEngine.RenderCore.camera.position.z) * 0.08;
+                    CoreEngine.RenderCore.camera.position.y += (targetCamY - CoreEngine.RenderCore.camera.position.y) * 0.08;
+
+                    // Kamera stale śledzi środek masy pojazdu z lekkim podbiciem do góry
+                    let lookTarget = new THREE.Vector3(state.posX, state.posY + 0.6, state.posZ);
+                    CoreEngine.RenderCore.camera.lookAt(lookTarget);
+
+                    // Aktualizacja procesów tła (atmosfera, pył miejski)
+                    CoreEngine.RenderCore.updateParticles();
+
+                    // Wywołanie sprzętowe klatki renderu
+                    CoreEngine.RenderCore.renderer.render(CoreEngine.RenderCore.scene, CoreEngine.RenderCore.camera);
+                }
             }
-
-            // Stan przyczepności opon
-            const gripBox = document.getElementById('hud-grip');
-            if (physicsEngine.isDrifting) {
-                gripBox.innerText = "ZERWANA (DRIFT)";
-                gripBox.style.color = "var(--neon-red)";
-            } else {
-                gripBox.innerText = "NOMINALNY";
-                gripBox.style.color = "#00ff66";
-            }
-
-            // Wskaźnik przeciążeń G-Force (Ruch punktu centralnego)
-            const gDot = document.getElementById('g-dot');
-            // Przeliczenie ograniczeń pikselowych układu kółka HUD
-            let clampX = Math.max(Math.min(27 + (physicsEngine.gForceX * 25), 52), 2);
-            let clampY = Math.max(Math.min(27 - (physicsEngine.gForceY * 25), 52), 2);
-            gDot.style.left = `${clampX}px`;
-            gDot.style.top = `${clampY}px`;
-        }
-
-        function updateCameraPosition() {
-            if (!inputManager.controls.cameraToggle) {
-                // TRYB TRADYCYJNY: Trzecia osoba (TPP Tracking)
-                const backOffset = new THREE.Vector3(
-                    -Math.sin(physicsEngine.heading) * 10.5,
-                    3.8,
-                    -Math.cos(physicsEngine.heading) * 10.5
-                );
-                const idealCameraPosition = physicsEngine.position.clone().add(backOffset);
-                
-                // Liniowa interpolacja pozycji kamery dająca płynny kinowy efekt ruchu zawieszenia
-                camera.position.lerp(idealCameraPosition, 0.08);
-                camera.lookAt(physicsEngine.position.clone().add(new THREE.Vector3(0, 0.7, 0)));
-            } else {
-                // TRYB ALTERNATYWNY: Widok z maski/Zderzaka pojazdu (FPP)
-                const frontOffset = new THREE.Vector3(
-                    Math.sin(physicsEngine.heading) * 1.8,
-                    0.9,
-                    Math.cos(physicsEngine.heading) * 1.8
-                );
-                camera.position.copy(physicsEngine.position).add(frontOffset);
-                
-                const lookTarget = physicsEngine.position.clone().add(
-                    new THREE.Vector3(Math.sin(physicsEngine.heading)*20, 0.6, Math.cos(physicsEngine.heading)*20)
-                );
-                camera.lookAt(lookTarget);
-            }
-        }
-
-        function onWindowResize() {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        }
-
-        // Uruchomienie procedury startu głównego silnika po załadowaniu drzewa DOM
-        window.onload = () => {
-            initEngine();
         };
+
+        // Rejestracja globalna wejścia klawiatury fizycznej PC
+        window.addEventListener('keydown', (e) => { CoreEngine.State.keyboard[e.code] = true; });
+        window.addEventListener('keyup', (e) => { CoreEngine.State.keyboard[e.code] = false; });
+
+        // Uruchomienie głównego konstruktora po załadowaniu drzewa DOM dokumentu
+        window.addEventListener('DOMContentLoaded', () => {
+            CoreEngine.SystemManager.init();
+        });
     </script>
 </body>
 </html>
