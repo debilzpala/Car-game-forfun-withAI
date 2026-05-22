@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Gra 3D - Proceduralny Tor i Otoczenie</title>
+    <title>Gra 3D - Realistyczna Fizyka i Droga</title>
     <style>
         * {
             margin: 0;
@@ -276,25 +276,6 @@
             z-index: 10;
         }
         
-        #popup {
-            position: absolute;
-            top: 25%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            color: #fff;
-            background: rgba(255, 69, 0, 0.85);
-            padding: 15px 30px;
-            font-size: 24px;
-            font-weight: bold;
-            border-radius: 30px;
-            text-transform: uppercase;
-            box-shadow: 0 0 15px rgba(0,0,0,0.5);
-            pointer-events: none;
-            opacity: 0;
-            transition: opacity 0.2s ease-in-out;
-            z-index: 10;
-        }
-        
         #instrukcja {
             position: absolute;
             bottom: 20px;
@@ -380,17 +361,9 @@
             border: 2px solid #dc143c;
         }
         
-        #brakePedal:active {
-            background: rgba(220, 20, 60, 0.9);
-        }
-        
         #gasPedal {
             background: rgba(46, 139, 87, 0.6);
             border: 2px solid #2e8b57;
-        }
-        
-        #gasPedal:active {
-            background: rgba(46, 139, 87, 0.9);
         }
         
         #camBtnMobile {
@@ -535,7 +508,7 @@
         <div class="mapSelector">
             <div class="mapOption" data-map="miasto">
                 <div class="mapImage" style="background: linear-gradient(45deg, #27ae60, #2ecc71);"></div>
-                <div class="mapName">Generowany Zielony Tor</div>
+                <div class="mapName">Droga Krajowa (Proceduralna)</div>
             </div>
         </div>
         <button id="confirmMapBtn">Potwierdź Wybór</button>
@@ -554,11 +527,13 @@
         
         <div id="ui">
             Kamera: <span id="camMode" class="highlight">TPP</span><br>
-            Prędkość: <span id="speed">0</span> km/h
+            Prędkość: <span id="speed">0</span> km/h<br>
+            Stan przyczepności: <span id="gripState" class="highlight">Stabilny</span>
         </div>
         
         <div id="instrukcja">
-            Sterowanie: <b>Strzałki / WASD</b> | Kamera: <b>C</b>
+            Sterowanie: <b>Strzałki / WASD</b> | Kamera: <b>C</b><br>
+            <span style="color:#ffaa00">Wskazówka: Zaciągaj hamulec w zakręcie, by zerwać przyczepność!</span>
         </div>
         
         <div id="playerList">
@@ -606,16 +581,31 @@
         let scene, camera, renderer, car;
         let gltfLoader, dracoLoader;
 
-        // Sterowanie
+        // --- ZAAWANSOWANA REALISTYCZNA FIZYKA JAZDY ---
         const keys = { w: false, a: false, s: false, d: false, arrowup: false, arrowdown: false, arrowleft: false, arrowright: false };
-        let speed = 0;
-        const maxSpeed = 1.8;      
-        const acceleration = 0.03;  
-        const deceleration = 0.015; 
-        const brakePower = 0.08;    
-        let carRotation = 0;        
-        const turnSpeed = 0.04;    
-        let camView = 'TPP'; // TPP lub TOP
+        
+        // Wektory ruchu pojazdu
+        let carPos = new THREE.Vector3(0, 0.1, 0);
+        let carVelocity = new THREE.Vector3(0, 0, 0);
+        let carHeading = 0; // Kąt obrotu auta (w radianach)
+        let steerAngle = 0; // Aktualny kąt skrętu kół przednich
+        
+        // Stałe charakterystyki pojazdu
+        const mass = 1500;            // Masa w kg
+        const engineForce = 8000;     // Siła przyspieszenia silnika
+        const brakingForce = 15000;   // Siła hamowania
+        const dragCoeff = 0.45;       // Opór powietrza
+        const rrCoeff = 0.015;        // Opór toczenia opon
+        const maxSteerAngle = 0.5;    // Maksymalny wychył kół (ok 30 stopni)
+        const steerSpeed = 0.05;      // Szybkość kręcenia kierownicą
+        const steerReturnSpeed = 0.08;// Szybkość prostowania kół
+        const wheelBase = 2.7;        // Rozstaw osi (wpływa na promień skrętu)
+        
+        // Parametry Driftu / Uślizgu bocznego (Grip & Slip)
+        let sideSlip = 0;             
+        let isDrifting = false;
+
+        let camView = 'TPP'; 
         
         // Mobile Controls
         let isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
@@ -667,7 +657,6 @@
         // --- SEKCJA SIECIOWA (PEERJS P2P) ---
         function initPeer(isRoomHost, targetRoomId = null) {
             peer = new Peer();
-            
             peer.on('open', (id) => {
                 myPeerId = id;
                 if (isRoomHost) {
@@ -678,15 +667,11 @@
                     connectToHost(targetRoomId);
                 }
             });
-            
             peer.on('error', (err) => {
                 console.error(err);
                 showError('Błąd połączenia sieciowego: ' + err.type);
             });
-            
-            peer.on('connection', (conn) => {
-                setupConnection(conn);
-            });
+            peer.on('connection', (conn) => { setupConnection(conn); });
         }
         
         function connectToHost(hostId) {
@@ -696,18 +681,11 @@
         
         function setupConnection(conn) {
             connections.push(conn);
-            
             conn.on('open', () => {
                 updatePlayerListUI();
-                if (gameState === 'game') {
-                    conn.send({ type: 'start_game', map: selectedMap });
-                }
+                if (gameState === 'game') conn.send({ type: 'start_game', map: selectedMap });
             });
-            
-            conn.on('data', (data) => {
-                handleNetworkData(data, conn.peer);
-            });
-            
+            conn.on('data', (data) => { handleNetworkData(data, conn.peer); });
             conn.on('close', () => {
                 if (remotePlayers[conn.peer] && remotePlayers[conn.peer].mesh) {
                     scene.remove(remotePlayers[conn.peer].mesh);
@@ -719,9 +697,7 @@
         }
         
         function broadcast(data) {
-            connections.forEach(conn => {
-                if (conn.open) conn.send(data);
-            });
+            connections.forEach(conn => { if (conn.open) conn.send(data); });
         }
         
         function handleNetworkData(data, senderPeerId) {
@@ -754,15 +730,13 @@
                     if (!gltf || !gltf.scene) return;
                     const remoteMesh = gltf.scene;
                     remoteMesh.scale.set(0.5, 0.5, 0.5);
-                    remoteMesh.position.set(5, 0.2, 0); 
+                    remoteMesh.position.set(0, 0.1, 0); 
                     if(scene) scene.add(remoteMesh);
                     remotePlayers[peerId].mesh = remoteMesh;
                 }, undefined, (err) => {
-                    // Fallback jeśli u kogoś nie ma pliku auta przeciwnika - stwórz zastępczy sześcian
                     const boxGeom = new THREE.BoxGeometry(1.8, 1, 4);
                     const boxMat = new THREE.MeshStandardMaterial({color: 0xff0000});
                     const fallbackMesh = new THREE.Mesh(boxGeom, boxMat);
-                    fallbackMesh.position.set(5, 0.5, 0);
                     scene.add(fallbackMesh);
                     remotePlayers[peerId].mesh = fallbackMesh;
                 });
@@ -773,7 +747,6 @@
             const playerListDiv = document.getElementById('playerList');
             const statusIndicator = document.querySelector('.statusIndicator');
             const connectionStatusText = document.querySelector('#connectionStatus span:last-child');
-            
             if (!peer) return;
             
             let html = `<div class="playerItem me">Ty (${isHost ? 'Host' : 'Gracz'})</div>`;
@@ -791,46 +764,26 @@
         
         // --- MENU NAVIGATION ---
         document.getElementById('singlePlayerBtn').addEventListener('click', () => {
-            gameState = 'carSelect';
-            isHost = true;
-            mainMenu.style.display = 'none';
-            carSelection.style.display = 'flex';
+            gameState = 'carSelect'; isHost = true; mainMenu.style.display = 'none'; carSelection.style.display = 'flex';
         });
-        
         document.getElementById('multiplayerBtn').addEventListener('click', () => {
-            mainMenu.style.display = 'none';
-            multiplayerMenu.style.display = 'flex';
+            mainMenu.style.display = 'none'; multiplayerMenu.style.display = 'flex';
         });
-        
         document.getElementById('hostBtn').addEventListener('click', () => {
-            isHost = true;
-            multiplayerMenu.style.display = 'none';
-            hostRoom.style.display = 'flex';
-            initPeer(true); 
+            isHost = true; multiplayerMenu.style.display = 'none'; hostRoom.style.display = 'flex'; initPeer(true); 
         });
-        
         document.getElementById('joinBtn').addEventListener('click', () => {
-            multiplayerMenu.style.display = 'none';
-            joinRoom.style.display = 'flex';
+            multiplayerMenu.style.display = 'none'; joinRoom.style.display = 'flex';
         });
-        
         document.getElementById('startHostGameBtn').addEventListener('click', () => {
-            gameState = 'carSelect';
-            hostRoom.style.display = 'none';
-            carSelection.style.display = 'flex';
+            gameState = 'carSelect'; hostRoom.style.display = 'none'; carSelection.style.display = 'flex';
         });
-        
         document.getElementById('joinRoomBtn').addEventListener('click', () => {
             const typedRoomId = roomIdInput.value.trim();
             if (typedRoomId) {
-                isHost = false;
-                gameState = 'carSelect';
-                joinRoom.style.display = 'none';
-                carSelection.style.display = 'flex';
+                isHost = false; gameState = 'carSelect'; joinRoom.style.display = 'none'; carSelection.style.display = 'flex';
                 initPeer(false, typedRoomId); 
-            } else {
-                alert('Wpisz ID pokoju!');
-            }
+            } else { alert('Wpisz ID pokoju!'); }
         });
         
         document.getElementById('backToMainBtn').addEventListener('click', () => { multiplayerMenu.style.display = 'none'; mainMenu.style.display = 'flex'; });
@@ -843,183 +796,170 @@
         document.querySelectorAll('.carOption').forEach(option => {
             option.addEventListener('click', () => {
                 document.querySelectorAll('.carOption').forEach(opt => opt.classList.remove('selected'));
-                option.classList.add('selected');
-                selectedCar = option.dataset.car;
+                option.classList.add('selected'); selectedCar = option.dataset.car;
             });
         });
         
         document.getElementById('confirmCarBtn').addEventListener('click', () => {
             if (isHost) {
-                gameState = 'mapSelect';
-                carSelection.style.display = 'none';
-                mapSelection.style.display = 'flex';
+                gameState = 'mapSelect'; carSelection.style.display = 'none'; mapSelection.style.display = 'flex';
             } else {
-                gameState = 'loading';
-                carSelection.style.display = 'none';
-                loadingScreen.style.display = 'flex';
-                if(loadingText) loadingText.textContent = "Oczekiwanie aż Host zatwierdzi start...";
+                gameState = 'loading'; carSelection.style.display = 'none'; loadingScreen.style.display = 'flex';
             }
         });
-        
         document.getElementById('backToCarSelect').addEventListener('click', () => {
-            carSelection.style.display = 'none';
-            if (isHost) { hostRoom.style.display = 'flex'; } else { joinRoom.style.display = 'flex'; }
+            carSelection.style.display = 'none'; if (isHost) { hostRoom.style.display = 'flex'; } else { joinRoom.style.display = 'flex'; }
         });
-        
         document.getElementById('confirmMapBtn').addEventListener('click', () => {
-            gameState = 'loading';
-            mapSelection.style.display = 'none';
-            loadingScreen.style.display = 'flex';
-            
+            gameState = 'loading'; mapSelection.style.display = 'none'; loadingScreen.style.display = 'flex';
             broadcast({ type: 'start_game', map: selectedMap });
-            
-            setTimeout(() => {
-                startGame();
-            }, 500);
+            setTimeout(() => { startGame(); }, 500);
         });
         
         function showError(message) {
-            errorMessage.textContent = message;
-            errorMessage.style.display = 'block';
+            errorMessage.textContent = message; errorMessage.style.display = 'block';
             setTimeout(() => { errorMessage.style.display = 'none'; }, 6000);
         }
         
-        // --- SILNIK GENEROWANIA MAPY (PROCEDURALNY) ---
+        // --- SILNIK PROCEDURALNEJ DROGI I ASFALTU (NATURALNA DROGA KRAJOWA) ---
         function generateProceduralMap() {
             const mapGroup = new THREE.Group();
 
-            // 1. Podłoże (Trawa)
-            const grassGeo = new THREE.PlaneGeometry(2000, 2000);
-            const grassMat = new THREE.MeshStandardMaterial({ color: 0x27ae60, roughness: 0.9 });
+            // 1. Podłoże wielkoobszarowe (Trawa / Ziemia)
+            const grassGeo = new THREE.PlaneGeometry(3000, 3000);
+            const grassMat = new THREE.MeshStandardMaterial({ color: 0x3b7a57, roughness: 0.95 });
             const grass = new THREE.Mesh(grassGeo, grassMat);
             grass.rotation.x = -Math.PI / 2;
             grass.receiveShadow = true;
             mapGroup.add(grass);
 
-            // 2. Asfaltowy Tor (Kształt stadionu z wycięciem w środku przy użyciu grubego ringu)
-            // Tworzymy zamknięty owalny tor za pomocą ścieżki i ShapeGeometry
-            const trackShape = new THREE.Shape();
+            // 2. Punkty kontrolne dla drogi (Krzywa Catmull-Rom - naturalne, nieregularne zakręty drogi podmiejskiej)
+            const curvePoints = [
+                new THREE.Vector3(0, 0, 0),
+                new THREE.Vector3(60, 0, 120),
+                new THREE.Vector3(200, 0, 180),
+                new THREE.Vector3(380, 0, 80),
+                new THREE.Vector3(450, 0, -100),
+                new THREE.Vector3(290, 0, -250),
+                new THREE.Vector3(100, 0, -160),
+                new THREE.Vector3(-120, 0, -290),
+                new THREE.Vector3(-300, 0, -150),
+                new THREE.Vector3(-250, 0, 40),
+                new THREE.Vector3(-100, 0, 10)
+            ];
             
-            // Parametry toru
-            const R = 80;       // Promień zakrętów
-            const L = 140;      // Długość prostych
-            const W = 18;       // Szerokość drogi
-            
-            // Zewnętrzna krawędź toru
-            trackShape.moveTo(-L/2, R + W/2);
-            trackShape.lineTo(L/2, R + W/2);
-            trackShape.absarc(L/2, 0, R + W/2, Math.PI/2, -Math.PI/2, true);
-            trackShape.lineTo(-L/2, -R - W/2);
-            trackShape.absarc(-L/2, 0, R + W/2, -Math.PI/2, Math.PI/2, true);
-            
-            // Otwór w środku (wewnętrzna krawędź toru)
-            const innerHole = new THREE.Path();
-            innerHole.moveTo(-L/2, R - W/2);
-            innerHole.lineTo(L/2, R - W/2);
-            innerHole.absarc(L/2, 0, R - W/2, Math.PI/2, -Math.PI/2, true);
-            innerHole.lineTo(-L/2, -R - W/2 + W);
-            innerHole.absarc(-L/2, 0, R - W/2, -Math.PI/2, Math.PI/2, true);
-            
-            trackShape.holes.push(innerHole);
+            // Zamknięcie pętli drogi
+            const roadCurve = new THREE.CatmullRomCurve3(curvePoints);
+            roadCurve.closed = true;
 
-            const asphaltGeo = new THREE.ShapeGeometry(trackShape, 64);
-            const asphaltMat = new THREE.MeshStandardMaterial({ color: 0x34495e, roughness: 0.7 });
-            const asphalt = new THREE.Mesh(asphaltGeo, asphaltMat);
-            asphalt.rotation.x = -Math.PI / 2;
-            asphalt.position.y = 0.02; // Minimalnie wyżej niż trawa, aby uniknąć z-fightingu
-            asphalt.receiveShadow = true;
-            mapGroup.add(asphalt);
+            // Parametry geometrii drogi
+            const roadWidth = 12; // Szerokość drogi (dwupasmówka)
+            const tubularSegments = 400;
+            const radialSegments = 2; // Płaska płaszczyzna, więc wystarczą 2 punkty na szerokość
 
-            // 3. Linie krawędziowe i Tarki (Biało-czerwone krawężniki)
-            function createCurb(radius, isOuter) {
-                const curbGroup = new THREE.Group();
-                const segments = 120;
-                const colorWhite = new THREE.MeshStandardMaterial({ color: 0xffffff });
-                const colorRed = new THREE.MeshStandardMaterial({ color: 0xe74c3c });
+            // Tworzymy ExtrudeGeometry wzdłuż wygenerowanej krzywej, aby ułożyć idealnie drogę
+            const extrudeSettings = {
+                steps: tubularSegments,
+                bevelEnabled: false,
+                extrudePath: roadCurve
+            };
+
+            // Kształt przekroju poprzecznego drogi (płaski prostokąt symetryczny)
+            const roadShape = new THREE.Shape();
+            roadShape.moveTo(-roadWidth / 2, 0);
+            roadShape.lineTo(roadWidth / 2, 0);
+            roadShape.lineTo(roadWidth / 2, 0.03); // Niewielka grubość warstwy asfaltu
+            roadShape.lineTo(-roadWidth / 2, 0.03);
+            roadShape.lineTo(-roadWidth / 2, 0);
+
+            const roadGeo = new THREE.ExtrudeGeometry(roadShape, extrudeSettings);
+            
+            // Materiał Asfaltu o drobnej szorstkości
+            const asphaltMat = new THREE.MeshStandardMaterial({ 
+                color: 0x2c3e50, 
+                roughness: 0.85,
+                metalness: 0.1
+            });
+            
+            const roadMesh = new THREE.Mesh(roadGeo, asphaltMat);
+            roadMesh.receiveShadow = true;
+            mapGroup.add(roadMesh);
+
+            // 3. GENEROWANIE PASÓW RUCHU (Przerywana linia biała na środku drogi i ciągłe na krawędziach)
+            const samplingPoints = roadCurve.getPoints(tubularSegments * 2);
+            
+            for(let i = 0; i < samplingPoints.length - 1; i++) {
+                const pt = samplingPoints[i];
+                const nextPt = samplingPoints[i+1];
                 
-                for(let i=0; i<segments; i++) {
-                    const angle1 = (i / segments) * Math.PI * 2;
-                    const angle2 = ((i + 1) / segments) * Math.PI * 2;
-                    
-                    let x1, z1, x2, z2;
-                    
-                    // Lewy zakręt, prawy zakręt lub proste
-                    if (angle1 < Math.PI) { // Górna połowa owalu
-                        const t1 = angle1 / Math.PI;
-                        x1 = -L/2 + t1 * L;
-                        z1 = radius;
-                    } else { // Dolna połowa owalu
-                        const t1 = (angle1 - Math.PI) / Math.PI;
-                        x1 = L/2 - t1 * L;
-                        z1 = -radius;
-                    }
-                    
-                    if (angle2 < Math.PI) {
-                        const t2 = angle2 / Math.PI;
-                        x2 = -L/2 + t2 * L;
-                        z2 = radius;
-                    } else {
-                        const t2 = (angle2 - Math.PI) / Math.PI;
-                        x2 = L/2 - t2 * L;
-                        z2 = -radius;
-                    }
+                // Kierunek wektora drogi w danym miejscu
+                const dir = new THREE.Vector3().subVectors(nextPt, pt).normalize();
+                const up = new THREE.Vector3(0, 1, 0);
+                // Wektor prostopadły do drogi (w bok)
+                const side = new THREE.Vector3().crossVectors(dir, up).normalize();
 
-                    // Korekta dla półkoli na końcach prostych
-                    if (angle1 > Math.PI/2 && angle1 < Math.PI*1.5) {
-                        // Modyfikacja pozycji pod łuki zakrętów dla lepszego wyglądu (uproszczony owal wokół punktów skupienia)
-                        if(x1 > L/2) { x1 = L/2 + Math.cos(angle1)*radius; z1 = Math.sin(angle1)*radius; }
-                        if(x1 < -L/2) { x1 = -L/2 + Math.cos(angle1)*radius; z1 = Math.sin(angle1)*radius; }
-                    }
-
-                    // Budowanie drobnego krawężnika (boxa)
-                    const curbGeo = new THREE.BoxGeometry(1.5, 0.15, 0.4);
-                    const curbMesh = new THREE.Mesh(curbGeo, (i % 2 === 0) ? colorWhite : colorRed);
+                // Co kilka punktów generujemy białą linię przerywaną pośrodku jezdni
+                if(i % 4 === 0) {
+                    const dashGeo = new THREE.BoxGeometry(0.18, 0.01, 2.5);
+                    const dashMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+                    const centerDash = new THREE.Mesh(dashGeo, dashMat);
                     
-                    // Uśredniona pozycja segmentu
-                    curbMesh.position.set((x1+x2)/2, 0.05, (z1+z2)/2);
-                    curbMesh.lookAt(x2, 0.05, z2);
-                    mapGroup.add(curbMesh);
+                    centerDash.position.copy(pt).add(new THREE.Vector3(0, 0.04, 0));
+                    centerDash.lookAt(nextPt.clone().add(new THREE.Vector3(0, 0.04, 0)));
+                    mapGroup.add(centerDash);
+                }
+
+                // Linie krawędziowe (ciągłe, na obrzeżach asfaltu)
+                if(i % 2 === 0) {
+                    const sideLineGeo = new THREE.BoxGeometry(0.12, 0.01, 1.6);
+                    const sideLineMat = new THREE.MeshBasicMaterial({ color: 0xdddddd });
+                    
+                    // Lewa krawędź
+                    const leftLine = new THREE.Mesh(sideLineGeo, sideLineMat);
+                    leftLine.position.copy(pt).add(side.clone().multiplyScalar(roadWidth / 2 - 0.2)).add(new THREE.Vector3(0, 0.04, 0));
+                    leftLine.lookAt(nextPt.clone().add(side.clone().multiplyScalar(roadWidth / 2 - 0.2)));
+                    mapGroup.add(leftLine);
+
+                    // Prawa krawędź
+                    const rightLine = new THREE.Mesh(sideLineGeo, sideLineMat);
+                    rightLine.position.copy(pt).add(side.clone().multiplyScalar(-roadWidth / 2 + 0.2)).add(new THREE.Vector3(0, 0.04, 0));
+                    rightLine.lookAt(nextPt.clone().add(side.clone().multiplyScalar(-roadWidth / 2 + 0.2)));
+                    mapGroup.add(rightLine);
                 }
             }
-            
-            // Generuj tarki po wewnętrznej i zewnętrznej stronie zakrętów
-            // Dla prostoty postawimy pasy drzew wokół zamiast skomplikowanych matematycznie krawężników
-            
-            // 4. Generowanie DRZEW (Proceduralny las dookoła toru)
-            const trunkGeo = new THREE.CylinderGeometry(0.2, 0.4, 2.5, 5);
-            const leavesGeo = new THREE.ConeGeometry(1.5, 3, 5);
-            
-            const trunkMat = new THREE.MeshStandardMaterial({ color: 0x5c4033, roughness: 0.9 });
-            const leavesMat = new THREE.MeshStandardMaterial({ color: 0x1e5631, roughness: 0.6 });
-            
-            const staticTreeMesh = new THREE.Group();
-            const trunk = new THREE.Mesh(trunkGeo, trunkMat);
-            trunk.position.y = 1.25;
-            const leaves = new THREE.Mesh(leavesGeo, leavesMat);
-            leaves.position.y = 3;
-            staticTreeMesh.add(trunk, leaves);
 
-            // Rozmieść losowo 250 drzew, omijając sam tor asfaltowy
-            for (let i = 0; i < 300; i++) {
-                const tX = (Math.random() - 0.5) * 500;
-                const tZ = (Math.random() - 0.5) * 500;
-                
-                // Sprawdzenie odległości od centrum, by drzewa nie rosły na środku drogi
-                const distToCenterLine = Math.abs(tZ);
-                
-                // Warunek: nie stawiaj drzewa zbyt blisko strefy toru (R ok 70 do 100)
-                if (distToCenterLine > (R - W - 15) && distToCenterLine < (R + W + 15) && Math.abs(tX) < (L/2 + R + 10)) {
-                    continue; // Drzewo wpadłoby na drogę - pomiń iterację
+            // 4. Pobocza i otoczenie (Losowe drzewa rozrzucone z dala od samej wstęgi szosy)
+            const trunkGeo = new THREE.CylinderGeometry(0.25, 0.35, 3, 6);
+            const leavesGeo = new THREE.DodecahedronGeometry(1.6, 1);
+            const trunkMat = new THREE.MeshStandardMaterial({ color: 0x4a3b32, roughness: 0.9 });
+            const leavesMat = new THREE.MeshStandardMaterial({ color: 0x2e5c1e, roughness: 0.8 });
+            
+            const staticTree = new THREE.Group();
+            const trunk = new THREE.Mesh(trunkGeo, trunkMat); trunk.position.y = 1.5;
+            const leaves = new THREE.Mesh(leavesGeo, leavesMat); leaves.position.y = 3.6;
+            staticTree.add(trunk, leaves);
+
+            // Stawianie lasu wokół drogi
+            for (let i = 0; i < 400; i++) {
+                const tX = (Math.random() - 0.5) * 800;
+                const tZ = (Math.random() - 0.5) * 800;
+                const treePos = new THREE.Vector3(tX, 0, tZ);
+
+                // Sprawdzamy odległość do najbliższego punktu drogi, by drzewo nie wrosło w środek szosy
+                let minDistanceToRoad = Infinity;
+                for(let j=0; j < samplingPoints.length; j += 4) {
+                    const d = treePos.distanceTo(samplingPoints[j]);
+                    if(d < minDistanceToRoad) minDistanceToRoad = d;
                 }
-                
-                const treeInstance = staticTreeMesh.clone();
-                treeInstance.position.set(tX, 0, tZ);
-                
-                // Delikatne zróżnicowanie wielkości drzew
-                const randomScale = 0.7 + Math.random() * 0.6;
-                treeInstance.scale.set(randomScale, randomScale, randomScale);
-                
-                mapGroup.add(treeInstance);
+
+                // Drzewa rosną minimum 12 metrów od osi drogi
+                if (minDistanceToRoad > 12) {
+                    const treeInstance = staticTree.clone();
+                    treeInstance.position.copy(treePos);
+                    const rS = 0.8 + Math.random() * 0.7;
+                    treeInstance.scale.set(rS, rS, rS);
+                    mapGroup.add(treeInstance);
+                }
             }
 
             scene.add(mapGroup);
@@ -1032,16 +972,15 @@
             loadingScreen.style.display = 'none';
             canvasContainer.style.display = 'block';
             isGameReady = false; 
-            
             initGame();
         }
         
         function initGame() {
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x7ec0ee); // Piękne błękitne niebo
-            scene.fog = new THREE.FogExp2(0x7ec0ee, 0.005);
+            scene.background = new THREE.Color(0xaed6f1); 
+            scene.fog = new THREE.FogExp2(0xaed6f1, 0.003);
             
-            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 2000);
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 3000);
             
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
@@ -1050,11 +989,11 @@
             canvasContainer.innerHTML = '';
             canvasContainer.appendChild(renderer.domElement);
             
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
             scene.add(ambientLight);
             
-            const dirLight = new THREE.DirectionalLight(0xffffff, 1.0);
-            dirLight.position.set(100, 300, 50);
+            const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+            dirLight.position.set(200, 400, 100);
             dirLight.castShadow = true;
             scene.add(dirLight);
             
@@ -1066,38 +1005,32 @@
             
             const carConfig = carConfigs[selectedCar];
             
-            // Ładowanie tylko i wyłącznie auta gracza z pliku lokalnego (.glb)
+            // Inicjalizacja parametrów pozycji startowej auta
+            carPos.set(0, 0.1, 10);
+            carVelocity.set(0, 0, 0);
+            carHeading = -Math.PI / 4;
+            steerAngle = 0;
+            
             gltfLoader.load(
                 carConfig.path,
                 (gltf) => {
-                    if (!gltf || !gltf.scene) {
-                        showError("Błąd: Pusty plik modelu samochodu.");
-                        return;
-                    }
+                    if (!gltf || !gltf.scene) return;
                     car = gltf.scene;
                     car.scale.set(0.5, 0.5, 0.5);
-                    // Ustaw auto na linii startowej wygenerowanego toru (np. na prostej)
-                    car.position.set(isHost ? 0 : 4, 0.1, 90); 
+                    car.position.copy(carPos);
                     scene.add(car);
                     
                     broadcast({ type: 'init_car', carType: selectedCar });
-                    connections.forEach(conn => {
-                        conn.send({ type: 'init_car', carType: selectedCar });
-                    });
-                    
-                    // Zamiast ładowania mapy z pliku zewnętrznego - GENERACJA PROCEDURALNA
+                    connections.forEach(conn => { conn.send({ type: 'init_car', carType: selectedCar }); });
                     generateProceduralMap();
                 },
                 undefined,
                 (error) => {
-                    console.error('Błąd ładowania samochodu .glb:', error);
-                    showError(`Brak pliku "${carConfig.path}". Do działania wymagane jest posiadanie modelu auta obok pliku html.`);
-                    
-                    // Fallback na wypadek braku pliku .glb auta - stwórz sześcian gracza aby gra w ogóle działała!
-                    const boxGeom = new THREE.BoxGeometry(1.8, 1, 4);
-                    const boxMat = new THREE.MeshStandardMaterial({color: 0x00ff00});
+                    // Fallback zielony prostopadłościan z "przodem" oznaczonym kolorem
+                    const boxGeom = new THREE.BoxGeometry(1.8, 0.9, 4);
+                    const boxMat = new THREE.MeshStandardMaterial({color: 0x2ecc71, roughness: 0.5});
                     car = new THREE.Mesh(boxGeom, boxMat);
-                    car.position.set(0, 0.5, 90);
+                    car.position.copy(carPos);
                     scene.add(car);
                     generateProceduralMap();
                 }
@@ -1110,63 +1043,157 @@
                 renderer.setSize(window.innerWidth, window.innerHeight);
             });
             
+            // Główna pętla fizyki i renderowania (60 FPS)
+            const dt = 1 / 60;
+            
             function animate() {
                 requestAnimationFrame(animate);
                 
                 if (!isGameReady || !car || !scene || !camera || !renderer) return;
                 
-                // --- FIZYKA JAZDY SAMOCHODEM ---
-                if (keys.w || keys.arrowup) {
-                    speed += acceleration;
-                    if (speed > maxSpeed) speed = maxSpeed;
-                } 
-                else if (keys.s || keys.arrowdown) {
-                    if (speed > 0) {
-                        speed -= brakePower; 
-                    } else {
-                        speed -= acceleration; 
-                        if (speed < -maxSpeed / 2) speed = -maxSpeed / 2;
-                    }
-                } 
-                else {
-                    if (speed > 0) {
-                        speed -= deceleration;
-                        if (speed < 0) speed = 0;
-                    } else if (speed < 0) {
-                        speed += deceleration;
-                        if (speed > 0) speed = 0;
-                    }
-                }
-
-                if (Math.abs(speed) > 0.01) {
-                    const directionModifier = speed > 0 ? 1 : -1; 
-                    if (keys.a || keys.arrowleft) carRotation += turnSpeed * directionModifier;
-                    if (keys.d || keys.arrowright) carRotation -= turnSpeed * directionModifier;
-                }
-
-                car.rotation.y = carRotation;
-                car.position.x -= Math.sin(carRotation) * speed;
-                car.position.z -= Math.cos(carRotation) * speed;
+                // --- REALISTYCZNY MODEL FIZYKI KOŁOWEJ SAMOCHODU ---
                 
-                // --- SYSTEM KAMERY ---
-                if (camView === 'TPP') {
-                    const camDist = 9; 
-                    const camHeight = 3.2;   
-                    camera.position.x = car.position.x + Math.sin(carRotation) * camDist;
-                    camera.position.z = car.position.z + Math.cos(carRotation) * camDist;
-                    camera.position.y = car.position.y + camHeight;
-                    camera.lookAt(car.position.x, car.position.y + 0.6, car.position.z);
+                // 1. Obsługa skrętu (Kierownica z bezwładnością i powrotem)
+                if (keys.a || keys.arrowleft) {
+                    steerAngle += steerSpeed;
+                    if (steerAngle > maxSteerAngle) steerAngle = maxSteerAngle;
+                } else if (keys.d || keys.arrowright) {
+                    steerAngle -= steerSpeed;
+                    if (steerAngle < -maxSteerAngle) steerAngle = -maxSteerAngle;
                 } else {
-                    // Kamera z góry (TOP / Minimap style)
-                    camera.position.set(car.position.x, car.position.y + 60, car.position.z);
+                    // Automatyczne prostowanie kół
+                    if (steerAngle > 0) {
+                        steerAngle -= steerReturnSpeed;
+                        if (steerAngle < 0) steerAngle = 0;
+                    } else if (steerAngle < 0) {
+                        steerAngle += steerReturnSpeed;
+                        if (steerAngle > 0) steerAngle = 0;
+                    }
+                }
+
+                // 2. Kalkulacja wektorów kierunku auta
+                const forwardX = -Math.sin(carHeading);
+                const forwardZ = -Math.cos(carHeading);
+                const carForward = new THREE.Vector3(forwardX, 0, forwardZ).normalize();
+                const carRight = new THREE.Vector3(-forwardZ, 0, forwardX).normalize();
+
+                // Rzutowanie prędkości na lokalne osie auta
+                const currentForwardSpeed = carVelocity.dot(carForward);
+                const currentSideSpeed = carVelocity.dot(carRight);
+
+                // 3. Obliczanie sił działających na auto
+                let fDrive = 0;
+                let fBrake = 0;
+
+                if (keys.w || keys.arrowup) {
+                    fDrive = engineForce;
+                } else if (keys.s || keys.arrowdown) {
+                    if (currentForwardSpeed > 0.2) {
+                        fBrake = brakingForce; // Hamowanie awaryjne
+                    } else {
+                        fDrive = -engineForce / 2; // Wsteczny
+                    }
+                }
+
+                // Opory ruchu (Aerodynamiczny + Toczenia)
+                const fDragX = -dragCoeff * carVelocity.x * Math.abs(carVelocity.x);
+                const fDragZ = -dragCoeff * carVelocity.z * Math.abs(carVelocity.z);
+                
+                const fRrX = -rrCoeff * carVelocity.x;
+                const fRrZ = -rrCoeff * carVelocity.z;
+
+                // Siła napędowa wzdłużna
+                const fTractionX = carForward.x * fDrive - carForward.x * fBrake * Math.sign(currentForwardSpeed);
+                const fTractionZ = carForward.z * fDrive - carForward.z * fBrake * Math.sign(currentForwardSpeed);
+
+                // Całkowita siła wzdłużna osiowa
+                const totalForceX = fTractionX + fDragX + fRrX;
+                const totalForceZ = fTractionZ + fDragZ + fRrZ;
+
+                // 4. Przyspieszenie liniowe i aktualizacja prędkości podstawowej
+                const accelX = totalForceX / mass;
+                const accelZ = totalForceZ / mass;
+
+                carVelocity.x += accelX * dt;
+                carVelocity.z += accelZ * dt;
+
+                // 5. OBSŁUGA PRZYCZEPNOŚCI BOCZNEJ I DRIFTU
+                // Obliczamy tzw. kąt poślizgu opon (Sideslip)
+                sideSlip = currentSideSpeed;
+                
+                // Stała przyczepności opon (Zmniejsza się, kiedy auto porusza się bokiem pod wpływem pędu)
+                let gripElasticity = 12.0; 
+                if (Math.abs(sideSlip) > 3.5) {
+                    isDrifting = true;
+                    gripElasticity = 4.0; // Zerwanie przyczepności - opony się ślizgają
+                    document.getElementById('gripState').textContent = "POŚLIZG (Drift)";
+                    document.getElementById('gripState').style.color = "#ff3333";
+                } else {
+                    isDrifting = false;
+                    document.getElementById('gripState').textContent = "Stabilny";
+                    document.getElementById('gripState').style.color = "#4caf50";
+                }
+
+                // Siła centrowania bocznego (likwiduje ruch boczny w zależności od gripu)
+                const lateralFrictionX = -carRight.x * sideSlip * gripElasticity;
+                const lateralFrictionZ = -carRight.z * sideSlip * gripElasticity;
+
+                carVelocity.x += lateralFrictionX * dt;
+                carVelocity.z += lateralFrictionZ * dt;
+
+                // 6. Obrót nadwozia (Fizyka promienia skrętu wynikająca z kąta kół przednich)
+                // Kąt obrotu zależy od prędkości postępowej pojazdu
+                const turnRadiusVelocity = currentForwardSpeed / wheelBase;
+                carHeading += steerAngle * turnRadiusVelocity * dt;
+
+                // Dodatkowy efekt zarzucania tyłem przy uślizgu (Drift rotation bonus)
+                if (isDrifting) {
+                    carHeading += (sideSlip * 0.02);
+                }
+
+                // 7. Zastosowanie prędkości do pozycji pojazdu
+                carPos.addScaledVector(carVelocity, 1);
+                
+                // Aktualizacja modelu Three.js
+                car.position.copy(carPos);
+                car.rotation.y = carHeading;
+
+                // Animacja skrętu kół w modelu (opcjonalna, jeśli model wspiera poprawne nazewnictwo kości)
+                // W tym przypadku obracamy całą bryłę pojazdu w zakrętach dla realizmu pochylenia
+
+                // --- SYSTEM INTELIGENTNEJ KAMERY (Z BEZWŁADNOŚCIĄ / Z OPÓŹNIENIEM) ---
+                if (camView === 'TPP') {
+                    const targetCamDist = 7.5;
+                    const targetCamHeight = 2.4;
+                    
+                    // Pozycja kamery podąża z gładkim opóźnieniem (lerp), dając kinowe uczucie masy
+                    const desiredCamX = car.position.x + Math.sin(carHeading) * targetCamDist;
+                    const desiredCamZ = car.position.z + Math.cos(carHeading) * targetCamDist;
+                    const desiredCamY = car.position.y + targetCamHeight;
+
+                    camera.position.x += (desiredCamX - camera.position.x) * 0.1;
+                    camera.position.z += (desiredCamZ - camera.position.z) * 0.1;
+                    camera.position.y += (desiredCamY - camera.position.y) * 0.1;
+                    
+                    // Kamera patrzy lekko przed auto, uwzględniając aktualny pęd i kierunek driftu
+                    camera.lookAt(
+                        car.position.x - carVelocity.x * 0.2, 
+                        car.position.y + 0.5, 
+                        car.position.z - carVelocity.z * 0.2
+                    );
+                } else {
+                    camera.position.set(car.position.x, car.position.y + 80, car.position.z);
                     camera.lookAt(car.position.x, car.position.y, car.position.z);
                 }
                 
-                // Aktualizacja UI prędkości
+                // Aktualizacja UI prędkości w km/h
                 const speedDisplay = document.getElementById('speed');
-                if(speedDisplay) speedDisplay.textContent = Math.round(Math.abs(speed) * 100);
+                if(speedDisplay) {
+                    const kmh = Math.round(Math.abs(currentForwardSpeed) * 3.6);
+                    speedDisplay.textContent = kmh;
+                }
 
-                // Ciągłe rozsyłanie swojej pozycji do sieci P2P
+                // Transmisja multiplayer sieci P2P
                 broadcast({
                     type: 'update_position',
                     pos: { x: car.position.x, y: car.position.y, z: car.position.z },
@@ -1175,11 +1202,10 @@
                 
                 renderer.render(scene, camera);
             }
-            
             animate();
         }
         
-        // Domyślne zaznaczenia w menu na start
+        // Domyślne konfiguracje na start
         document.querySelector('.carOption[data-car="bmw_m5"]').classList.add('selected');
         document.querySelector('.mapOption[data-map="miasto"]').classList.add('selected');
     </script>
