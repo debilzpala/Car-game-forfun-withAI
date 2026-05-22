@@ -2,1223 +2,1162 @@
 <html lang="pl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Gra 3D - Realistyczna Fizyka i Droga</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced 3D Racing Engine & P2P Multiplayer</title>
     <style>
-        * {
+        :root {
+            --neon-cyan: #00e5ff;
+            --neon-orange: #ff9800;
+            --neon-red: #ff3d00;
+            --bg-dark: #030a10;
+        }
+        
+        body, html {
             margin: 0;
             padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-        
-        body {
             overflow: hidden;
-            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #1a2a6c);
-            height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            color: white;
-        }
-        
-        #gameContainer {
-            position: relative;
             width: 100%;
             height: 100%;
+            background-color: var(--bg-dark);
+            font-family: 'Courier New', Courier, monospace;
+            user-select: none;
         }
-        
-        #canvasContainer {
+
+        #canvas-container {
+            width: 100%;
+            height: 100%;
             position: absolute;
             top: 0;
             left: 0;
-            width: 100%;
-            height: 100%;
-            display: none;
+            z-index: 1;
         }
-        
-        canvas {
-            display: block;
-        }
-        
-        /* MENU STYLES */
-        .menu {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            background: rgba(0, 0, 0, 0.85);
-            z-index: 100;
-            padding: 20px;
-            text-align: center;
-        }
-        
-        .menu h1 {
-            font-size: 3.5rem;
-            margin-bottom: 20px;
-            text-transform: uppercase;
-            letter-spacing: 3px;
-            background: linear-gradient(to right, #ff8a00, #e52e71);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            text-shadow: 0 0 10px rgba(255, 138, 0, 0.5);
-        }
-        
-        .menu h2 {
-            font-size: 2.5rem;
-            margin: 20px 0;
-            color: #ff8a00;
-        }
-        
-        .menu button {
-            background: linear-gradient(45deg, #ff8a00, #e52e71);
-            border: none;
-            padding: 15px 40px;
-            margin: 15px 0;
-            font-size: 1.4rem;
-            color: white;
-            border-radius: 50px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-            width: 300px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            font-weight: bold;
-        }
-        
-        .menu button:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
-            background: linear-gradient(45deg, #ff9a3d, #ec407a);
-        }
-        
-        .menu input {
-            padding: 15px;
-            width: 300px;
-            margin: 15px 0;
-            font-size: 1.2rem;
-            border: 2px solid #ff8a00;
-            border-radius: 50px;
-            background: rgba(0, 0, 0, 0.5);
-            color: white;
-            text-align: center;
-        }
-        
-        .menu input::placeholder {
-            color: #aaa;
-        }
-        
-        .backButton {
-            background: rgba(255, 255, 255, 0.1) !important;
-            border: 1px solid #ff8a00 !important;
-            margin-top: 30px;
-        }
-        
-        /* CAR SELECTOR */
-        .carSelector {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            gap: 20px;
-            margin: 20px 0;
-            max-width: 800px;
-        }
-        
-        .carOption {
-            width: 200px;
-            height: 150px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 15px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            border: 2px solid transparent;
-            overflow: hidden;
-        }
-        
-        .carOption:hover {
-            transform: scale(1.05);
-            border-color: #ff8a00;
-            box-shadow: 0 0 20px rgba(255, 138, 0, 0.5);
-        }
-        
-        .carOption.selected {
-            border-color: #e52e71;
-            background: rgba(229, 46, 113, 0.2);
-            box-shadow: 0 0 20px rgba(229, 46, 113, 0.5);
-        }
-        
-        .carImage {
-            width: 100%;
-            height: 100px;
-            background-size: contain;
-            background-repeat: no-repeat;
-            background-position: center;
-        }
-        
-        .carName {
-            margin-top: 10px;
-            font-size: 1.1rem;
-            font-weight: bold;
-        }
-        
-        /* MAP SELECTOR */
-        .mapSelector {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            gap: 20px;
-            margin: 20px 0;
-            max-width: 800px;
-        }
-        
-        .mapOption {
-            width: 200px;
-            height: 150px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 15px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            border: 2px solid transparent;
-            overflow: hidden;
-        }
-        
-        .mapOption:hover {
-            transform: scale(1.05);
-            border-color: #ff8a00;
-            box-shadow: 0 0 20px rgba(255, 138, 0, 0.5);
-        }
-        
-        .mapOption.selected {
-            border-color: #e52e71;
-            background: rgba(229, 46, 113, 0.2);
-            box-shadow: 0 0 20px rgba(229, 46, 113, 0.5);
-        }
-        
-        .mapImage {
-            width: 100%;
-            height: 100px;
-            background-size: cover;
-            background-repeat: no-repeat;
-            background-position: center;
-        }
-        
-        .mapName {
-            margin-top: 10px;
-            font-size: 1.1rem;
-            font-weight: bold;
-        }
-        
-        /* LOADING SCREEN */
-        #loadingScreen {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.9);
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 200;
-            display: none;
-        }
-        
-        .loader {
-            width: 80px;
-            height: 80px;
-            border: 8px solid rgba(255, 255, 255, 0.1);
-            border-top: 8px solid #ff8a00;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin-bottom: 30px;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        #loadingText {
-            font-size: 1.5rem;
-            text-align: center;
-            max-width: 80%;
-        }
-        
-        /* GAME UI */
-        #ui {
+
+        /* TELEMETRY DASHBOARD (HUD) */
+        #hud-container {
             position: absolute;
             top: 20px;
             left: 20px;
-            color: white;
-            font-size: 18px;
-            font-weight: bold;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
-            pointer-events: none;
-            background: rgba(0,0,0,0.5);
-            padding: 15px;
+            z-index: 10;
+            background: rgba(5, 15, 25, 0.85);
+            border: 1px solid #005f73;
             border-radius: 8px;
-            line-height: 1.4;
-            z-index: 10;
-        }
-        
-        #instrukcja {
-            position: absolute;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            color: white;
-            background: rgba(0,0,0,0.6);
-            padding: 10px 20px;
-            border-radius: 10px;
-            pointer-events: none;
-            text-align: center;
-            font-size: 14px;
-            z-index: 10;
-        }
-        
-        .highlight {
-            color: #ff8a00;
-        }
-        
-        /* MOBILE CONTROLS */
-        #mobileControls {
-            display: none;
-            position: absolute;
-            bottom: 30px;
-            left: 0;
-            width: 100%;
-            height: 160px;
-            z-index: 30;
+            padding: 20px;
+            color: #ffffff;
+            width: 280px;
+            box-shadow: 0 0 20px rgba(0, 229, 255, 0.15);
             pointer-events: none;
         }
-        
-        #joystickZone {
-            position: absolute;
-            left: 40px;
-            bottom: 20px;
-            width: 130px;
-            height: 130px;
-            background: rgba(255,255,255,0.15);
-            border: 3px solid rgba(255,255,255,0.4);
-            border-radius: 50%;
-            pointer-events: auto;
-        }
-        
-        #joystickStick {
-            position: absolute;
-            left: 40px;
-            top: 40px;
-            width: 50px;
-            height: 50px;
-            background: rgba(255, 138, 0, 0.8);
-            border-radius: 50%;
-            box-shadow: 0 0 10px rgba(0,0,0,0.5);
-            transition: transform 0.05s linear;
-        }
-        
-        #pedalsZone {
-            position: absolute;
-            right: 40px;
-            bottom: 20px;
-            width: 180px;
-            height: 130px;
-            pointer-events: auto;
+
+        .hud-row {
+            margin-bottom: 12px;
             display: flex;
-            gap: 20px;
-        }
-        
-        .pedal {
-            flex: 1;
-            height: 100%;
-            border-radius: 12px;
-            display: flex;
+            justify-content: space-between;
             align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: bold;
-            font-size: 20px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+        }
+
+        .hud-label {
+            color: #88a0b0;
+            font-size: 11px;
             text-transform: uppercase;
-            user-select: none;
-            -webkit-user-select: none;
+            letter-spacing: 1px;
         }
-        
-        #brakePedal {
-            background: rgba(220, 20, 60, 0.6);
-            border: 2px solid #dc143c;
-        }
-        
-        #gasPedal {
-            background: rgba(46, 139, 87, 0.6);
-            border: 2px solid #2e8b57;
-        }
-        
-        #camBtnMobile {
-            position: absolute;
-            top: 20px;
-            right: 260px;
-            background: rgba(0,0,0,0.6);
-            border: 1px solid white;
-            color: white;
-            padding: 10px 15px;
-            border-radius: 6px;
+
+        .hud-value {
+            font-size: 16px;
             font-weight: bold;
-            z-index: 30;
-            display: none;
+            color: var(--neon-cyan);
         }
-        
-        /* PLAYER LIST */
-        #playerList {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: rgba(0,0,0,0.7);
-            padding: 15px;
-            border-radius: 8px;
-            color: white;
+
+        .hud-value-large {
+            font-size: 28px;
             font-weight: bold;
-            z-index: 10;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-            min-width: 200px;
+            color: #ffffff;
         }
-        
-        .playerItem {
-            padding: 5px 0;
-            border-bottom: 1px solid rgba(255,255,255,0.2);
-        }
-        
-        .playerItem:last-child {
-            border-bottom: none;
-        }
-        
-        .playerItem.me {
-            color: #ff8a00;
-        }
-        
-        /* CONNECTION STATUS */
-        #connectionStatus {
-            position: absolute;
-            bottom: 20px;
-            right: 20px;
-            background: rgba(0,0,0,0.7);
-            padding: 10px 15px;
-            border-radius: 8px;
-            color: white;
-            font-weight: bold;
-            z-index: 10;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-        }
-        
-        .statusIndicator {
-            display: inline-block;
-            width: 12px;
+
+        /* TACHOMETER BAR */
+        .tacho-container {
+            width: 100%;
             height: 12px;
-            border-radius: 50%;
-            margin-right: 8px;
+            background: #0a192f;
+            border: 1px solid #005f73;
+            border-radius: 4px;
+            margin: 8px 0;
+            overflow: hidden;
+            position: relative;
         }
-        
-        .connected {
-            background: #4caf50;
+
+        #tacho-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #00e5ff 0%, #00ff66 70%, #ff3d00 90%);
+            transition: width 0.05s linear;
         }
-        
-        .disconnected {
-            background: #f44336;
-        }
-        
-        /* ERROR MESSAGE */
-        #errorMessage {
+
+        #tacho-redline {
             position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(255, 0, 0, 0.9);
-            padding: 25px;
-            border-radius: 10px;
-            color: white;
+            right: 15%;
+            top: 0;
+            width: 2px;
+            height: 100%;
+            background: var(--neon-red);
+        }
+
+        /* G-FORCE METER */
+        #g-meter {
+            width: 60px;
+            height: 60px;
+            border: 1px solid #005f73;
+            border-radius: 50%;
+            position: relative;
+            margin: 10px auto;
+            background: rgba(10, 25, 47, 0.5);
+        }
+
+        #g-dot {
+            width: 6px;
+            height: 6px;
+            background: var(--neon-orange);
+            border-radius: 50%;
+            position: absolute;
+            top: 27px;
+            left: 27px;
+            box-shadow: 0 0 8px var(--neon-orange);
+        }
+
+        /* NETWORK MANAGEMENT PANEL */
+        #network-panel {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 10;
+            background: rgba(5, 15, 25, 0.85);
+            border: 1px solid #005f73;
+            border-radius: 8px;
+            padding: 15px;
+            color: #ffffff;
+            width: 300px;
+            box-shadow: 0 0 20px rgba(0, 229, 255, 0.15);
+        }
+
+        .net-title {
+            color: var(--neon-orange);
+            font-size: 12px;
             font-weight: bold;
-            text-align: center;
-            z-index: 1000;
-            display: none;
-            max-width: 80%;
-            box-shadow: 0 0 20px rgba(0,0,0,0.7);
+            margin-bottom: 10px;
+            letter-spacing: 1px;
+            border-bottom: 1px solid #005f73;
+            padding-bottom: 5px;
+        }
+
+        .net-id-box {
+            background: #020c16;
+            border: 1px dashed #00e5ff;
+            padding: 8px;
+            font-size: 12px;
+            word-break: break-all;
+            margin-bottom: 10px;
+            color: #a0c0d0;
+        }
+
+        .net-input {
+            width: 100%;
+            background: #020c16;
+            border: 1px solid #005f73;
+            color: #fff;
+            padding: 8px;
+            box-sizing: border-box;
+            margin-bottom: 10px;
+            font-family: monospace;
+        }
+
+        .net-input:focus {
+            outline: none;
+            border-color: var(--neon-cyan);
+        }
+
+        .net-btn {
+            width: 100%;
+            background: #005f73;
+            color: white;
+            border: none;
+            padding: 10px;
+            font-weight: bold;
+            cursor: pointer;
+            letter-spacing: 1px;
+            transition: background 0.2s;
+        }
+
+        .net-btn:hover {
+            background: var(--neon-cyan);
+            color: #000;
+        }
+
+        #net-status {
+            margin-top: 8px;
+            font-size: 11px;
+            color: #aaa;
+        }
+
+        /* LOADING OVERLAY */
+        #loader-overlay {
+            position: absolute;
+            top:0; left:0; width:100%; height:100%;
+            background: var(--bg-dark);
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: #fff;
+        }
+
+        .spinner {
+            width: 50px; height: 50px;
+            border: 3px solid #0a192f;
+            border-radius: 50%;
+            border-top-color: var(--neon-cyan);
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        #progress-bar-container {
+            width: 300px; height: 4px;
+            background: #0a192f;
+            margin-top: 20px;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        #progress-bar {
+            width: 0%; height: 100%;
+            background: var(--neon-cyan);
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        .rev-limiter {
+            animation: red-flash 0.05s infinite alternate;
+        }
+        @keyframes red-flash {
+            from { color: #ffffff; }
+            to { color: var(--neon-red); }
         }
     </style>
+
+    <!-- Three.js i Moduły Ładowania zewnętrznych plików tekstur/modeli -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/MTLLoader.js"></script>
+    <!-- PeerJS do bezpośredniej komunikacji sieciowej P2P -->
+    <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
 </head>
 <body>
-    <div id="mainMenu" class="menu">
-        <h1>Race Master 3D</h1>
-        <button id="singlePlayerBtn">Graj Solo</button>
-        <button id="multiplayerBtn">Graj z Przyjacielem</button>
+
+    <div id="loader-overlay">
+        <div class="spinner"></div>
+        <div style="margin-top: 20px; font-size: 14px; letter-spacing: 2px;">INICJOWANIE SILNIKA 3D...</div>
+        <div id="progress-bar-container"><div id="progress-bar"></div></div>
+        <div id="loader-text" style="margin-top: 8px; font-size: 11px; color:#557788;">Generowanie infrastruktury miasta...</div>
     </div>
-    
-    <div id="multiplayerMenu" class="menu" style="display: none;">
-        <h2>Tryb Multiplayer</h2>
-        <button id="hostBtn">Stwórz Pokój</button>
-        <button id="joinBtn">Dołącz do Pokoju</button>
-        <button class="backButton" id="backToMainBtn">Powrót</button>
-    </div>
-    
-    <div id="hostRoom" class="menu" style="display: none;">
-        <h2>Tworzenie Pokoju</h2>
-        <p>Twoje ID pokoju:</p>
-        <input type="text" id="roomIdDisplay" readonly>
-        <p>Udostępnij ten kod znajomemu, aby mógł dołączyć!</p>
-        <button id="startHostGameBtn">Rozpocznij Grę</button>
-        <button class="backButton" id="backToMultiBtn">Powrót</button>
-    </div>
-    
-    <div id="joinRoom" class="menu" style="display: none;">
-        <h2>Dołącz do Pokoju</h2>
-        <input type="text" id="roomIdInput" placeholder="Wpisz ID pokoju">
-        <button id="joinRoomBtn">Dołącz</button>
-        <button class="backButton" id="backToMulti2Btn">Powrót</button>
-    </div>
-    
-    <div id="carSelection" class="menu" style="display: none;">
-        <h2>Wybierz Swój Samochód</h2>
-        <div class="carSelector">
-            <div class="carOption" data-car="bmw_m5">
-                <div class="carImage" style="background-image: url('data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 50\"><rect x=\"10\" y=\"15\" width=\"80\" height=\"20\" rx=\"5\" fill=\"%230066cc\"/><circle cx=\"25\" cy=\"35\" r=\"8\" fill=\"%23333\"/><circle cx=\"75\" cy=\"35\" r=\"8\" fill=\"%23333\"/></svg>')"></div>
-                <div class="carName">BMW M5</div>
-            </div>
-            <div class="carOption" data-car="porsche_911">
-                <div class="carImage" style="background-image: url('data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 50\"><rect x=\"15\" y=\"10\" width=\"70\" height=\"25\" rx=\"10\" fill=\"%23cc0000\"/><circle cx=\"25\" cy=\"35\" r=\"8\" fill=\"%23333\"/><circle cx=\"75\" cy=\"35\" r=\"8\" fill=\"%23333\"/></svg>')"></div>
-                <div class="carName">Porsche 911</div>
+
+    <div id="canvas-container"></div>
+
+    <!-- HUB TELEMETRII W CZASIE RZECZYWISTYM -->
+    <div id="hud-container">
+        <div class="hud-row">
+            <span class="hud-label">Sygnał/Tryb</span>
+            <span class="hud-value" id="hud-mode">TPP / M_AUTO</span>
+        </div>
+        <div class="hud-row" style="margin-bottom: 0;">
+            <span class="hud-label">Prędkość Pojazdu</span>
+            <div>
+                <span class="hud-value-large" id="hud-speed">0</span>
+                <span style="font-size: 10px; color: #88a0b0; margin-left: 4px;">KM/H</span>
             </div>
         </div>
-        <button id="confirmCarBtn">Potwierdź Wybór</button>
-        <button class="backButton" id="backToCarSelect">Powrót</button>
+        <div class="hud-row">
+            <span class="hud-label">Skrzynia / Bieg</span>
+            <span class="hud-value" id="hud-gear" style="font-size: 20px; color: var(--neon-orange);">1</span>
+        </div>
+        
+        <div class="hud-label">Obroty Silnika (RPM)</div>
+        <div class="tacho-container">
+            <div id="tacho-bar"></div>
+            <div id="tacho-redline"></div>
+        </div>
+        <div class="hud-row" style="margin-top: -5px;">
+            <span style="font-size: 10px; color:#556677;">1000</span>
+            <span id="hud-rpm-numeric" style="font-weight: bold; font-size: 12px;">1000 RPM</span>
+            <span style="font-size: 10px; color:var(--neon-red);">7000</span>
+        </div>
+
+        <hr style="border:0; border-top: 1px solid #005f73; margin: 15px 0;">
+
+        <div class="hud-row">
+            <span class="hud-label">Grip Osi Tylnej</span>
+            <span id="hud-grip" style="font-weight: bold; color: #00ff66;">NOMINALNY</span>
+        </div>
+
+        <div class="hud-label" style="text-align: center; margin-bottom: 5px;"> przeciążenia G-FORCE</div>
+        <div id="g-meter">
+            <div id="g-dot"></div>
+        </div>
     </div>
-    
-    <div id="mapSelection" class="menu" style="display: none;">
-        <h2>Wybierz Mapę</h2>
-        <div class="mapSelector">
-            <div class="mapOption" data-map="miasto">
-                <div class="mapImage" style="background: linear-gradient(45deg, #27ae60, #2ecc71);"></div>
-                <div class="mapName">Droga Krajowa (Proceduralna)</div>
-            </div>
-        </div>
-        <button id="confirmMapBtn">Potwierdź Wybór</button>
-        <button class="backButton" id="backToMapSelect">Powrót</button>
+
+    <!-- PANEL SIECIOWY MULTIPLAYER -->
+    <div id="network-panel">
+        <div class="net-title">POKÓJ MULTIPLAYER (P2P COOP)</div>
+        <div id="my-id-box" class="net-id-box">Generowanie Twojego klucza sieciowego...</div>
+        <input type="text" id="join-id-input" class="net-input" placeholder="Wklej ID gospodarza (Hosta)">
+        <button id="btn-connect" class="net-btn">DOŁĄCZ DO SESJI</button>
+        <div id="net-status">Połączenie: Lokalne (Singleplayer)</div>
+        <div id="ping-display" style="font-size:10px; color:#557788; margin-top:5px; display:none;">Ping P2P: -- ms</div>
     </div>
-    
-    <div id="loadingScreen">
-        <div class="loader"></div>
-        <div id="loadingText">Ładowanie gry...</div>
-    </div>
-    
-    <div id="errorMessage"></div>
-    
-    <div id="gameContainer">
-        <div id="canvasContainer"></div>
-        
-        <div id="ui">
-            Kamera: <span id="camMode" class="highlight">TPP</span><br>
-            Prędkość: <span id="speed">0</span> km/h<br>
-            Stan przyczepności: <span id="gripState" class="highlight">Stabilny</span>
-        </div>
-        
-        <div id="instrukcja">
-            Sterowanie: <b>Strzałki / WASD</b> | Kamera: <b>C</b><br>
-            <span style="color:#ffaa00">Wskazówka: Zaciągaj hamulec w zakręcie, by zerwać przyczepność!</span>
-        </div>
-        
-        <div id="playerList">
-            <div class="playerItem me">Ty (Host)</div>
-        </div>
-        
-        <div id="connectionStatus">
-            <span class="statusIndicator disconnected"></span>
-            <span>Połączono (1/4)</span>
-        </div>
-        
-        <div id="mobileControls">
-            <div id="joystickZone">
-                <div id="joystickStick"></div>
-            </div>
-            <div id="pedalsZone">
-                <div id="brakePedal" class="pedal">Hamulec</div>
-                <div id="gasPedal" class="pedal">Gaz</div>
-            </div>
-        </div>
-        
-        <button id="camBtnMobile">KAMERA (C)</button>
-    </div>
-    
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/DRACOLoader.js"></script>
-    <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
+
     <script>
-        // Global variables
-        let gameState = 'menu'; 
-        let selectedCar = 'bmw_m5';
-        let selectedMap = 'miasto';
-        let isHost = false;
-        let roomId = '';
-        let isGameReady = false; 
+        // ============================================================================
+        // ARCHITEKTURA I KONFIGURACJA PODSTAWOWA SILNIKA
+        // ============================================================================
         
-        // P2P Networking Variables
-        let peer = null;
-        let connections = [];
-        let remotePlayers = {}; 
-        let myPeerId = '';
-        
-        // Three.js Variables
-        let scene, camera, renderer, car;
-        let gltfLoader, dracoLoader;
-
-        // --- ZAAWANSOWANA REALISTYCZNA FIZYKA JAZDY ---
-        const keys = { w: false, a: false, s: false, d: false, arrowup: false, arrowdown: false, arrowleft: false, arrowright: false };
-        
-        // Wektory ruchu pojazdu
-        let carPos = new THREE.Vector3(0, 0.1, 0);
-        let carVelocity = new THREE.Vector3(0, 0, 0);
-        let carHeading = 0; 
-        let steerAngle = 0; 
-        
-        // Dynamiczne zmienne pod sterowanie mobilne (joystick i pedały)
-        let mobileInputs = { steer: 0, gas: false, brake: false };
-        
-        // Stałe charakterystyki pojazdu
-        // Zmniejsz te wartości, żeby auto nie pędziło jak szalone:
-        const mass = 1500;            // Zostaw masę bez zmian
-        const engineForce = 90;      // ZMNIEJSZ (było 8500! Dlatego tak pędziło)
-        const brakingForce = 400;     // ZMNIEJSZ (było 16000)
-        const dragCoeff = 0.05;       // ZMNIEJSZ (było 0.45)
-        const rrCoeff = 0.005;        // ZMNIEJSZ (było 0.015)
-        const maxSteerAngle = 0.52;   // Maksymalny wychył kół (ok 30 stopni)
-        const steerSpeed = 0.06;      // Szybkość kręcenia kierownicą
-        const steerReturnSpeed = 0.09;// Szybkość prostowania kół
-        const wheelBase = 2.7;        // Rozstaw osi
-        
-        let sideSlip = 0;             
-        let isDrifting = false;
-        let camView = 'TPP'; 
-        
-        // Mobile Controls Recognition
-        let isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-        const mobileControlsElement = document.getElementById('mobileControls');
-        const camBtnMobileElement = document.getElementById('camBtnMobile');
-        
-        // DOM Elements
-        const mainMenu = document.getElementById('mainMenu');
-        const multiplayerMenu = document.getElementById('multiplayerMenu');
-        const hostRoom = document.getElementById('hostRoom');
-        const joinRoom = document.getElementById('joinRoom');
-        const carSelection = document.getElementById('carSelection');
-        const mapSelection = document.getElementById('mapSelection');
-        const loadingScreen = document.getElementById('loadingScreen');
-        const loadingText = document.getElementById('loadingText');
-        const canvasContainer = document.getElementById('canvasContainer');
-        const roomIdDisplay = document.getElementById('roomIdDisplay');
-        const roomIdInput = document.getElementById('roomIdInput');
-        const errorMessage = document.getElementById('errorMessage');
-        
-        // POPRAWIONA NAZWA PLIKU
-        const carConfigs = {
-            'bmw_m5': { path: 'bmw_m5.glb' },
-            'porsche_911': { path: 'porsche.glb' }
+        const CONFIG = {
+            physics: {
+                mass: 1350,            // masa pojazdu w kg
+                gravity: 9.81,         // g m/s^2
+                dragCoeff: 0.32,       // współczynnik oporu pow.
+                rrCoeff: 0.015,        // opór toczenia
+                engineForceMax: 9500,  // max siła napędowa
+                brakeForceMax: 18000,  // max siła hamowania
+                handbrakeForce: 26000, // siła hamulca ręcznego
+                steeringSpeed: 0.04,   // szybkość skręcania kół
+                maxSteerAngle: 0.55,   // max kąt skrętu w radianach
+                snappyGrip: 0.85       // powrót przyczepności
+            },
+            engine: {
+                idleRpm: 950,
+                redlineRpm: 6300,
+                maxRpm: 7200,
+                gearRatios: [0, 3.65, 2.15, 1.45, 1.05, 0.82], // Biegi 1-5
+                finalDrive: 3.55
+            },
+            world: {
+                gridSize: 16,
+                cellSize: 50,
+                buildingDensity: 0.45
+            }
         };
+
+        // Zmienne systemowe Three.js
+        let scene, camera, renderer, clock;
+        let playerVehicle, remoteVehicle;
+        let inputManager, physicsEngine, audioEngine, networkManager;
         
-        if(isMobile) {
-            if(mobileControlsElement) mobileControlsElement.style.display = 'block';
-            if(camBtnMobileElement) camBtnMobileElement.style.display = 'block';
-        }
+        // Elementy zarządzania ładowaniem zasobów
+        const loadingManager = new THREE.LoadingManager();
+        
+        // Pętla klawiszy
+        const activeKeys = {};
 
-        // Obsługa Klawiatury
-        window.addEventListener('keydown', (e) => {
-            if (gameState !== 'game') return;
-            const key = e.key.toLowerCase();
-            if (key in keys) keys[key] = true;
-            
-            if(key === 'c') {
-                camView = camView === 'TPP' ? 'TOP' : 'TPP';
-                document.getElementById('camMode').textContent = camView;
+        // ============================================================================
+        // SYSTEM ZARZĄDZANIA WEJŚCIEM (INPUT MANAGER)
+        // ============================================================================
+        class InputManager {
+            constructor() {
+                this.controls = { forward: false, backward: false, left: false, right: false, handbrake: false, cameraToggle: false };
+                this.initListeners();
             }
-        });
 
-        window.addEventListener('keyup', (e) => {
-            if (gameState !== 'game') return;
-            const key = e.key.toLowerCase();
-            if (key in keys) keys[key] = false;
-        });
+            initListeners() {
+                window.addEventListener('keydown', (e) => this.updateKeyState(e, true));
+                window.addEventListener('keyup', (e) => this.updateKeyState(e, false));
+            }
 
-        // OBSŁUGA STEROWANIA DOTYKOWEGO (JOYSTICK + PEDAŁY)
-        if(isMobile) {
-            const joystickZone = document.getElementById('joystickZone');
-            const joystickStick = document.getElementById('joystickStick');
-            const gasPedal = document.getElementById('gasPedal');
-            const brakePedal = document.getElementById('brakePedal');
-            
-            joystickZone.addEventListener('touchstart', handleJoystick);
-            joystickZone.addEventListener('touchmove', handleJoystick);
-            joystickZone.addEventListener('touchend', () => {
-                joystickStick.style.transform = 'translate(0px, 0px)';
-                mobileInputs.steer = 0;
-            });
-            
-            function handleJoystick(e) {
-                const touch = e.touches[0];
-                const rect = joystickZone.getBoundingClientRect();
-                const centerX = rect.left + rect.width / 2;
-                const centerY = rect.top + rect.height / 2;
+            updateKeyState(e, isPressed) {
+                activeKeys[e.code] = isPressed;
                 
-                let deltaX = touch.clientX - centerX;
-                let deltaY = touch.clientY - centerY;
-                const distance = Math.sqrt(deltaX*deltaX + deltaY*deltaY);
-                const maxDistance = rect.width / 2 - 25;
-                
-                if (distance > maxDistance) {
-                    deltaX = (deltaX / distance) * maxDistance;
-                    deltaY = (deltaY / distance) * maxDistance;
+                switch(e.code) {
+                    case 'KeyW':
+                    case 'ArrowUp':
+                        this.controls.forward = isPressed;
+                        break;
+                    case 'KeyS':
+                    case 'ArrowDown':
+                        this.controls.backward = isPressed;
+                        break;
+                    case 'KeyA':
+                    case 'ArrowLeft':
+                        this.controls.left = isPressed;
+                        break;
+                    case 'KeyD':
+                    case 'ArrowRight':
+                        this.controls.right = isPressed;
+                        break;
+                    case 'Space':
+                        this.controls.handbrake = isPressed;
+                        break;
+                    case 'KeyC':
+                        if (isPressed) this.controls.cameraToggle = !this.controls.cameraToggle;
+                        break;
                 }
-                
-                joystickStick.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
-                mobileInputs.steer = deltaX / maxDistance;
-            }
-            
-            gasPedal.addEventListener('touchstart', (e) => { e.preventDefault(); mobileInputs.gas = true; });
-            gasPedal.addEventListener('touchend', () => { mobileInputs.gas = false; });
-            brakePedal.addEventListener('touchstart', (e) => { e.preventDefault(); mobileInputs.brake = true; });
-            brakePedal.addEventListener('touchend', () => { mobileInputs.brake = false; });
-            
-            if(camBtnMobileElement) {
-                camBtnMobileElement.addEventListener('click', () => {
-                    camView = camView === 'TPP' ? 'TOP' : 'TPP';
-                    document.getElementById('camMode').textContent = camView;
-                });
             }
         }
-        
-        // --- SEKCJA SIECIOWA (PEERJS P2P) ---
-        function initPeer(isRoomHost, targetRoomId = null) {
-            peer = new Peer();
-            peer.on('open', (id) => {
-                myPeerId = id;
-                if (isRoomHost) {
-                    roomId = id;
-                    roomIdDisplay.value = id; 
-                    updatePlayerListUI();
+
+        // ============================================================================
+        // ZAAWANSOWANY SILNIK FIZYKI MATEMATYCZNEJ (PHYSICS ENGINE)
+        // ============================================================================
+        class PhysicsEngine {
+            constructor() {
+                this.position = new THREE.Vector3(0, 0.1, 0);
+                this.velocity = new THREE.Vector3(0, 0, 0);
+                this.acceleration = new THREE.Vector3(0, 0, 0);
+                this.heading = 0;
+                this.steerAngle = 0;
+                
+                this.speedKMH = 0;
+                this.rpm = CONFIG.engine.idleRpm;
+                this.currentGear = 1;
+                this.isRevLimiterActive = false;
+                this.limiterTimer = 0;
+                
+                this.slipAngle = 0;
+                this.isDrifting = false;
+                this.gForceX = 0;
+                this.gForceY = 0;
+            }
+
+            update(dt, controls) {
+                if (dt > 0.1) dt = 0.1; // Zabezpieczenie przed spadkami klatek
+
+                // 1. Logika Układu Kierowniczego (Aproksymacja Ackermanna)
+                if (controls.left) {
+                    this.steerAngle = Math.min(this.steerAngle + CONFIG.physics.steeringSpeed, CONFIG.physics.maxSteerAngle);
+                } else if (controls.right) {
+                    this.steerAngle = Math.max(this.steerAngle - CONFIG.physics.steeringSpeed, -CONFIG.physics.maxSteerAngle);
                 } else {
-                    connectToHost(targetRoomId);
+                    // Wycentrowanie kierownicy
+                    this.steerAngle *= 0.75;
                 }
-            });
-            peer.on('error', (err) => {
-                console.error(err);
-                showError('Błąd połączenia sieciowego: ' + err.type);
-            });
-            peer.on('connection', (conn) => { setupConnection(conn); });
-        }
-        
-        function connectToHost(hostId) {
-            const conn = peer.connect(hostId);
-            setupConnection(conn);
-        }
-        
-        function setupConnection(conn) {
-            connections.push(conn);
-            conn.on('open', () => {
-                updatePlayerListUI();
-                if (gameState === 'game') conn.send({ type: 'start_game', map: selectedMap });
-            });
-            conn.on('data', (data) => { handleNetworkData(data, conn.peer); });
-            conn.on('close', () => {
-                if (remotePlayers[conn.peer] && remotePlayers[conn.peer].mesh) {
-                    scene.remove(remotePlayers[conn.peer].mesh);
-                }
-                delete remotePlayers[conn.peer];
-                connections = connections.filter(c => c.peer !== conn.peer);
-                updatePlayerListUI();
-            });
-        }
-        
-        function broadcast(data) {
-            connections.forEach(conn => { if (conn.open) conn.send(data); });
-        }
-        
-        function handleNetworkData(data, senderPeerId) {
-            if (data.type === 'start_game') {
-                selectedMap = data.map;
-                gameState = 'loading';
-                carSelection.style.display = 'none';
-                loadingScreen.style.display = 'flex';
-                startGame();
-            }
-            if (data.type === 'init_car') {
-                spawnRemotePlayerCar(senderPeerId, data.carType);
-            }
-            if (data.type === 'update_position') {
-                if (remotePlayers[senderPeerId] && remotePlayers[senderPeerId].mesh) {
-                    const remoteCar = remotePlayers[senderPeerId].mesh;
-                    remoteCar.position.set(data.pos.x, data.pos.y, data.pos.z);
-                    remoteCar.rotation.set(data.rot.x, data.rot.y, data.rot.z);
-                }
-            }
-        }
-        
-        function spawnRemotePlayerCar(peerId, carType) {
-            if (remotePlayers[peerId]) return; 
-            remotePlayers[peerId] = { carType: carType, mesh: null };
-            
-            const config = carConfigs[carType];
-            if (gltfLoader) {
-                gltfLoader.load(config.path, (gltf) => {
-                    if (!gltf || !gltf.scene) return;
-                    const remoteMesh = gltf.scene;
-                    remoteMesh.scale.set(0.5, 0.5, 0.5);
-                    remoteMesh.position.set(0, 0.1, 0); 
-                    if(scene) scene.add(remoteMesh);
-                    remotePlayers[peerId].mesh = remoteMesh;
-                }, undefined, (err) => {
-                    const boxGeom = new THREE.BoxGeometry(1.8, 1, 4);
-                    const boxMat = new THREE.MeshStandardMaterial({color: 0xff0000});
-                    const fallbackMesh = new THREE.Mesh(boxGeom, boxMat);
-                    scene.add(fallbackMesh);
-                    remotePlayers[peerId].mesh = fallbackMesh;
-                });
-            }
-        }
-        
-        function updatePlayerListUI() {
-            const playerListDiv = document.getElementById('playerList');
-            const statusIndicator = document.querySelector('.statusIndicator');
-            const connectionStatusText = document.querySelector('#connectionStatus span:last-child');
-            if (!peer) return;
-            
-            let html = `<div class="playerItem me">Ty (${isHost ? 'Host' : 'Gracz'})</div>`;
-            connections.forEach((c, index) => {
-                html += `<div class="playerItem">Gracz ${index + 2} (${c.peer.substring(0,4)})</div>`;
-            });
-            playerListDiv.innerHTML = html;
-            
-            const totalPlayers = connections.length + 1;
-            if(connectionStatusText) connectionStatusText.textContent = `Połączono (${totalPlayers}/4)`;
-            if(statusIndicator) {
-                statusIndicator.className = totalPlayers > 1 ? "statusIndicator connected" : "statusIndicator disconnected";
-            }
-        }
-        
-        // --- MENU NAVIGATION ---
-        document.getElementById('singlePlayerBtn').addEventListener('click', () => {
-            gameState = 'carSelect'; isHost = true; mainMenu.style.display = 'none'; carSelection.style.display = 'flex';
-        });
-        document.getElementById('multiplayerBtn').addEventListener('click', () => {
-            mainMenu.style.display = 'none'; multiplayerMenu.style.display = 'flex';
-        });
-        document.getElementById('hostBtn').addEventListener('click', () => {
-            isHost = true; multiplayerMenu.style.display = 'none'; hostRoom.style.display = 'flex'; initPeer(true); 
-        });
-        document.getElementById('joinBtn').addEventListener('click', () => {
-            multiplayerMenu.style.display = 'none'; joinRoom.style.display = 'flex';
-        });
-        document.getElementById('startHostGameBtn').addEventListener('click', () => {
-            gameState = 'carSelect'; hostRoom.style.display = 'none'; carSelection.style.display = 'flex';
-        });
-        document.getElementById('joinRoomBtn').addEventListener('click', () => {
-            const typedRoomId = roomIdInput.value.trim();
-            if (typedRoomId) {
-                isHost = false; gameState = 'carSelect'; joinRoom.style.display = 'none'; carSelection.style.display = 'flex';
-                initPeer(false, typedRoomId); 
-            } else { alert('Wpisz ID pokoju!'); }
-        });
-        
-        document.getElementById('backToMainBtn').addEventListener('click', () => { multiplayerMenu.style.display = 'none'; mainMenu.style.display = 'flex'; });
-        document.getElementById('backToMultiBtn').addEventListener('click', () => { 
-            if(peer) { peer.destroy(); peer = null; connections = []; }
-            hostRoom.style.display = 'none'; multiplayerMenu.style.display = 'flex'; 
-        });
-        document.getElementById('backToMulti2Btn').addEventListener('click', () => { joinRoom.style.display = 'none'; multiplayerMenu.style.display = 'flex'; });
-        
-        document.querySelectorAll('.carOption').forEach(option => {
-            option.addEventListener('click', () => {
-                document.querySelectorAll('.carOption').forEach(opt => opt.classList.remove('selected'));
-                option.classList.add('selected'); selectedCar = option.dataset.car;
-            });
-        });
-        
-        document.getElementById('confirmCarBtn').addEventListener('click', () => {
-            if (isHost) {
-                gameState = 'mapSelect'; carSelection.style.display = 'none'; mapSelection.style.display = 'flex';
-            } else {
-                gameState = 'loading'; carSelection.style.display = 'none'; loadingScreen.style.display = 'flex';
-            }
-        });
-        document.getElementById('backToCarSelect').addEventListener('click', () => {
-            carSelection.style.display = 'none'; if (isHost) { hostRoom.style.display = 'flex'; } else { joinRoom.style.display = 'flex'; }
-        });
-        document.getElementById('confirmMapBtn').addEventListener('click', () => {
-            gameState = 'loading'; mapSelection.style.display = 'none'; loadingScreen.style.display = 'flex';
-            broadcast({ type: 'start_game', map: selectedMap });
-            setTimeout(() => { startGame(); }, 500);
-        });
-        
-        function showError(message) {
-            errorMessage.textContent = message; errorMessage.style.display = 'block';
-            setTimeout(() => { errorMessage.style.display = 'none'; }, 6000);
-        }
-        
-        // --- SILNIK NATURALNEJ, REALISTYCZNEJ DROGI ASFALTOWEJ ---
-        function generateProceduralMap() {
-            const mapGroup = new THREE.Group();
 
-            const grassGeo = new THREE.PlaneGeometry(3000, 3000);
-            const grassMat = new THREE.MeshStandardMaterial({ color: 0x3b7a57, roughness: 0.95 });
-            const grass = new THREE.Mesh(grassGeo, grassMat);
-            grass.rotation.x = -Math.PI / 2;
-            grass.receiveShadow = true;
-            mapGroup.add(grass);
+                // Kierunki lokalne wektorów pojazdu
+                const forwardVector = new THREE.Vector3(Math.sin(this.heading), 0, Math.cos(this.heading));
+                const rightVector = new THREE.Vector3(Math.sin(this.heading + Math.PI/2), 0, Math.cos(this.heading + Math.PI/2));
 
-            // Naturalne ułożenie punktów drogi podmiejskiej (Krzywa Catmull-Rom)
-            const curvePoints = [
-                new THREE.Vector3(0, 0, 0),
-                new THREE.Vector3(60, 0, 120),
-                new THREE.Vector3(200, 0, 180),
-                new THREE.Vector3(380, 0, 80),
-                new THREE.Vector3(450, 0, -100),
-                new THREE.Vector3(290, 0, -250),
-                new THREE.Vector3(100, 0, -160),
-                new THREE.Vector3(-120, 0, -290),
-                new THREE.Vector3(-300, 0, -150),
-                new THREE.Vector3(-250, 0, 40),
-                new THREE.Vector3(-100, 0, 10)
-            ];
-            
-            const roadCurve = new THREE.CatmullRomCurve3(curvePoints);
-            roadCurve.closed = true;
+                // Prędkość do przodu i boczna
+                const forwardSpeed = this.velocity.dot(forwardVector);
+                const lateralSpeed = this.velocity.dot(rightVector);
+                this.speedKMH = forwardSpeed * 3.6;
 
-            const roadWidth = 12; 
-            const tubularSegments = 400;
-
-            const extrudeSettings = {
-                steps: tubularSegments,
-                bevelEnabled: false,
-                extrudePath: roadCurve
-            };
-
-            const roadShape = new THREE.Shape();
-            roadShape.moveTo(-roadWidth / 2, 0);
-            roadShape.lineTo(roadWidth / 2, 0);
-            roadShape.lineTo(roadWidth / 2, 0.03); 
-            roadShape.lineTo(-roadWidth / 2, 0.03);
-            roadShape.lineTo(-roadWidth / 2, 0);
-
-            const roadGeo = new THREE.ExtrudeGeometry(roadShape, extrudeSettings);
-            const asphaltMat = new THREE.MeshStandardMaterial({ 
-                color: 0x2c3e50, 
-                roughness: 0.85,
-                metalness: 0.1
-            });
-            
-            const roadMesh = new THREE.Mesh(roadGeo, asphaltMat);
-            roadMesh.receiveShadow = true;
-            mapGroup.add(roadMesh);
-
-            // Nanoszenie linii przerywanych i ciągłych na asfalt
-            const samplingPoints = roadCurve.getPoints(tubularSegments * 2);
-            
-            for(let i = 0; i < samplingPoints.length - 1; i++) {
-                const pt = samplingPoints[i];
-                const nextPt = samplingPoints[i+1];
-                
-                const dir = new THREE.Vector3().subVectors(nextPt, pt).normalize();
-                const up = new THREE.Vector3(0, 1, 0);
-                const side = new THREE.Vector3().crossVectors(dir, up).normalize();
-
-                // Przerywana oś jezdni
-                if(i % 4 === 0) {
-                    const dashGeo = new THREE.BoxGeometry(0.18, 0.01, 2.5);
-                    const dashMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
-                    const centerDash = new THREE.Mesh(dashGeo, dashMat);
+                // 2. Dynamiczna Symulacja Skrzyni i Obrotów Silnika (RPM)
+                if (this.currentGear > 0) {
+                    let calculatedRpm = CONFIG.engine.idleRpm + (Math.abs(this.speedKMH) * CONFIG.engine.gearRatios[this.currentGear] * CONFIG.engine.finalDrive * 2.0);
                     
-                    centerDash.position.copy(pt).add(new THREE.Vector3(0, 0.04, 0));
-                    centerDash.lookAt(nextPt.clone().add(new THREE.Vector3(0, 0.04, 0)));
-                    mapGroup.add(centerDash);
-                }
+                    // Zabezpieczenie limitera (Odcięcie zapłonu)
+                    if (calculatedRpm >= CONFIG.engine.maxRpm) {
+                        this.isRevLimiterActive = true;
+                    }
 
-                // Linie krawędziowe boczne
-                if(i % 2 === 0) {
-                    const sideLineGeo = new THREE.BoxGeometry(0.12, 0.01, 1.6);
-                    const sideLineMat = new THREE.MeshBasicMaterial({ color: 0xdddddd });
-                    
-                    const leftLine = new THREE.Mesh(sideLineGeo, sideLineMat);
-                    leftLine.position.copy(pt).add(side.clone().multiplyScalar(roadWidth / 2 - 0.2)).add(new THREE.Vector3(0, 0.04, 0));
-                    leftLine.lookAt(nextPt.clone().add(side.clone().multiplyScalar(roadWidth / 2 - 0.2)));
-                    mapGroup.add(leftLine);
-
-                    const rightLine = new THREE.Mesh(sideLineGeo, sideLineMat);
-                    rightLine.position.copy(pt).add(side.clone().multiplyScalar(-roadWidth / 2 + 0.2)).add(new THREE.Vector3(0, 0.04, 0));
-                    rightLine.lookAt(nextPt.clone().add(side.clone().multiplyScalar(-roadWidth / 2 + 0.2)));
-                    mapGroup.add(rightLine);
-                }
-            }
-
-            // Las wokół szosy
-            const trunkGeo = new THREE.CylinderGeometry(0.25, 0.35, 3, 6);
-            const leavesGeo = new THREE.DodecahedronGeometry(1.6, 1);
-            const trunkMat = new THREE.MeshStandardMaterial({ color: 0x4a3b32, roughness: 0.9 });
-            const leavesMat = new THREE.MeshStandardMaterial({ color: 0x2e5c1e, roughness: 0.8 });
-            
-            const staticTree = new THREE.Group();
-            const trunk = new THREE.Mesh(trunkGeo, trunkMat); trunk.position.y = 1.5;
-            const leaves = new THREE.Mesh(leavesGeo, leavesMat); leaves.position.y = 3.6;
-            staticTree.add(trunk, leaves);
-
-            for (let i = 0; i < 400; i++) {
-                const tX = (Math.random() - 0.5) * 800;
-                const tZ = (Math.random() - 0.5) * 800;
-                const treePos = new THREE.Vector3(tX, 0, tZ);
-
-                let minDistanceToRoad = Infinity;
-                for(let j=0; j < samplingPoints.length; j += 4) {
-                    const d = treePos.distanceTo(samplingPoints[j]);
-                    if(d < minDistanceToRoad) minDistanceToRoad = d;
-                }
-
-                if (minDistanceToRoad > 12) {
-                    const treeInstance = staticTree.clone();
-                    treeInstance.position.copy(treePos);
-                    const rS = 0.8 + Math.random() * 0.7;
-                    treeInstance.scale.set(rS, rS, rS);
-                    mapGroup.add(treeInstance);
-                }
-            }
-
-            scene.add(mapGroup);
-            isGameReady = true;
-        }
-
-        // --- GAME ENGINE (FIZYKA I RENDERING) ---
-        function startGame() {
-            gameState = 'game';
-            loadingScreen.style.display = 'none';
-            canvasContainer.style.display = 'block';
-            isGameReady = false; 
-            initGame();
-        }
-        
-        function initGame() {
-            scene = new THREE.Scene();
-            scene.background = new THREE.Color(0xaed6f1); 
-            scene.fog = new THREE.FogExp2(0xaed6f1, 0.003);
-            
-            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 3000);
-            
-            renderer = new THREE.WebGLRenderer({ antialias: true });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.shadowMap.enabled = true;
-            
-            canvasContainer.innerHTML = '';
-            canvasContainer.appendChild(renderer.domElement);
-            
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
-            scene.add(ambientLight);
-            
-            const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
-            dirLight.position.set(200, 400, 100);
-            dirLight.castShadow = true;
-            scene.add(dirLight);
-            
-            dracoLoader = new THREE.DRACOLoader();
-            dracoLoader.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/libs/draco/');
-            
-            gltfLoader = new THREE.GLTFLoader();
-            gltfLoader.setDRACOLoader(dracoLoader);
-            
-            const carConfig = carConfigs[selectedCar];
-            
-            carPos.set(0, 0.1, 10);
-            carVelocity.set(0, 0, 0);
-            carHeading = -Math.PI / 4;
-            steerAngle = 0;
-            
-            gltfLoader.load(
-                carConfig.path,
-                (gltf) => {
-                    if (!gltf || !gltf.scene) return;
-                    car = gltf.scene;
-                    car.scale.set(0.5, 0.5, 0.5);
-                    car.position.copy(carPos);
-                    scene.add(car);
-                    
-                    broadcast({ type: 'init_car', carType: selectedCar });
-                    connections.forEach(conn => { conn.send({ type: 'init_car', carType: selectedCar }); });
-                    generateProceduralMap();
-                },
-                undefined,
-                (error) => {
-                    const boxGeom = new THREE.BoxGeometry(1.8, 0.9, 4);
-                    const boxMat = new THREE.MeshStandardMaterial({color: 0x2ecc71, roughness: 0.5});
-                    car = new THREE.Mesh(boxGeom, boxMat);
-                    car.position.copy(carPos);
-                    scene.add(car);
-                    generateProceduralMap();
-                }
-            );
-            
-            window.addEventListener('resize', () => {
-                if(!camera || !renderer) return;
-                camera.aspect = window.innerWidth / window.innerHeight;
-                camera.updateProjectionMatrix();
-                renderer.setSize(window.innerWidth, window.innerHeight);
-            });
-            
-            const dt = 1 / 60;
-            
-            function animate() {
-                requestAnimationFrame(animate);
-                
-                if (!isGameReady || !car || !scene || !camera || !renderer) return;
-                
-                // 1. Obliczenie kierunku skrętu (Klawiatura lub Mobilny Joystick)
-                if (isMobile) {
-                    steerAngle = -mobileInputs.steer * maxSteerAngle;
-                } else {
-                    if (keys.a || keys.arrowleft) {
-                        steerAngle += steerSpeed;
-                        if (steerAngle > maxSteerAngle) steerAngle = maxSteerAngle;
-                    } else if (keys.d || keys.arrowright) {
-                        steerAngle -= steerSpeed;
-                        if (steerAngle < -maxSteerAngle) steerAngle = -maxSteerAngle;
+                    if (this.isRevLimiterActive) {
+                        this.limiterTimer += dt;
+                        // Praca przerywana zapłonu (0.08 sekundy odcięcia)
+                        this.rpm = CONFIG.engine.redlineRpm + Math.sin(Date.now() * 0.09) * 300;
+                        if (this.limiterTimer > 0.08) {
+                            this.isRevLimiterActive = false;
+                            this.limiterTimer = 0;
+                        }
                     } else {
-                        if (steerAngle > 0) {
-                            steerAngle -= steerReturnSpeed;
-                            if (steerAngle < 0) steerAngle = 0;
-                        } else if (steerAngle < 0) {
-                            steerAngle += steerReturnSpeed;
-                            if (steerAngle > 0) steerAngle = 0;
+                        this.rpm = Math.min(calculatedRpm, CONFIG.engine.maxRpm);
+                    }
+                }
+
+                // Automatyczna zmiana przełożeń (M_AUTO) oparta na krzywej obrotowej
+                if (!this.isRevLimiterActive && Math.abs(this.speedKMH) >= 0) {
+                    if (this.rpm > CONFIG.engine.redlineRpm && this.currentGear < 5) {
+                        this.currentGear++;
+                    } else if (this.rpm < 1600 && this.currentGear > 1) {
+                        this.currentGear--;
+                    }
+                }
+
+                // 3. Obliczanie sił działających na wektor masy pojazdu
+                const totalForces = new THREE.Vector3();
+
+                // Siła napędowa (Engine Force)
+                if (controls.forward && !this.isRevLimiterActive) {
+                    // Wyznaczanie siły ciągu w oparciu o przełożenie i obroty
+                    let torqueFactor = 1.0 - (this.rpm / CONFIG.engine.maxRpm) * 0.35;
+                    let forceMag = (CONFIG.physics.engineForceMax / CONFIG.engine.gearRatios[this.currentGear]) * torqueFactor;
+                    totalForces.add(forwardVector.clone().multiplyScalar(forceMag));
+                }
+
+                // Hamowanie i bieg wsteczny
+                if (controls.backward) {
+                    if (forwardSpeed > 0.2) {
+                        totalForces.add(forwardVector.clone().multiplyScalar(-CONFIG.physics.brakeForceMax));
+                    } else {
+                        // Cofanie pojazdu
+                        totalForces.add(forwardVector.clone().multiplyScalar(-CONFIG.physics.engineForceMax * 0.4));
+                    }
+                }
+
+                // Hamulec ręczny (Inicjacja poślizgu)
+                if (controls.handbrake) {
+                    this.isDrifting = true;
+                    totalForces.add(forwardVector.clone().multiplyScalar(-CONFIG.physics.handbrakeForce * 0.3 * Math.sign(forwardSpeed)));
+                } else {
+                    if (Math.abs(lateralSpeed) < 1.5) this.isDrifting = false;
+                }
+
+                // Opory aerodynamiczne i opory toczenia (F = Cw * v^2)
+                const airResistance = this.velocity.clone().multiplyScalar(-CONFIG.physics.dragCoeff * this.velocity.length());
+                const rollingResistance = this.velocity.clone().multiplyScalar(-CONFIG.physics.rrCoeff * CONFIG.physics.mass);
+                totalForces.add(airResistance).add(rollingResistance);
+
+                // 4. Integracja Matematyczna (Euler-Cromer)
+                this.acceleration.copy(totalForces).divideScalar(CONFIG.physics.mass);
+                this.velocity.add(this.acceleration.clone().multiplyScalar(dt));
+                this.position.add(this.velocity.clone().multiplyScalar(dt));
+
+                // Zabezpieczenie przed zapadaniem się pod mapę
+                this.position.y = 0.1;
+
+                // 5. Kinematyka boczna opon (Slip Angle & Lateral Force)
+                this.slipAngle = Math.atan2(lateralSpeed, Math.abs(forwardSpeed));
+                
+                // Redukcja boczna pędu (Tarcie opon o nawierzchnię)
+                let lateralFrictionModifier = this.isDrifting ? 0.18 : CONFIG.physics.snappyGrip;
+                const lateralVelocityCancellation = rightVector.clone().multiplyScalar(-lateralSpeed * CONFIG.physics.mass * lateralFrictionModifier);
+                this.velocity.add(lateralVelocityCancellation.multiplyScalar(dt));
+
+                // Rotacja nadwozia na podstawie skrętu kół i pędu
+                if (this.velocity.length() > 0.5) {
+                    let currentHeadingSpeed = this.velocity.dot(forwardVector);
+                    let turningRadiusFactor = this.steerAngle * (currentHeadingSpeed / 15);
+                    this.heading += turningRadiusFactor * dt * (this.isDrifting ? 1.4 : 1.0);
+                }
+
+                // 6. Obliczanie sił odśrodkowych G-Force
+                this.gForceX = (lateralSpeed * forwardSpeed) / (CONFIG.physics.gravity * 8);
+                this.gForceY = this.acceleration.dot(forwardVector) / CONFIG.physics.gravity;
+            }
+        }
+
+        // ============================================================================
+        // SYNTEZATOR AUDIO SILNIKA (AUDIO ENGINE VIA WEB AUDIO API)
+        // ============================================================================
+        class AudioEngine {
+            constructor() {
+                this.ctx = null;
+                this.oscillator = null;
+                this.gainNode = null;
+                this.isInitialized = false;
+
+                // Audio dla pisków opon
+                this.skidOsc = null;
+                this.skidGain = null;
+            }
+
+            init() {
+                try {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioContext();
+                    
+                    // Budowa łańcucha syntezy silnika
+                    this.oscillator = this.ctx.createOscillator();
+                    this.gainNode = this.ctx.createGain();
+                    
+                    this.oscillator.type = 'sawtooth'; // Agresywny dźwięk mechaniczny
+                    this.oscillator.frequency.value = 60;
+                    this.gainNode.gain.value = 0.0; // Wyciszony na starcie
+                    
+                    // Filtr dolnoprzepustowy nadający głębię basu
+                    const filter = this.ctx.createBiquadFilter();
+                    filter.type = 'lowpass';
+                    filter.frequency.value = 400;
+
+                    this.oscillator.connect(filter);
+                    filter.connect(this.gainNode);
+                    this.gainNode.connect(this.ctx.destination);
+                    this.oscillator.start(0);
+
+                    // Konfiguracja efektu pisków opon (Skid Audio)
+                    this.skidOsc = this.ctx.createOscillator();
+                    this.skidGain = this.ctx.createGain();
+                    this.skidOsc.type = 'triangle';
+                    this.skidOsc.frequency.value = 380;
+                    this.skidGain.gain.value = 0;
+                    
+                    const skidFilter = this.ctx.createBiquadFilter();
+                    skidFilter.type = 'bandpass';
+                    skidFilter.frequency.value = 1200;
+
+                    this.skidOsc.connect(skidFilter);
+                    skidFilter.connect(this.skidGain);
+                    this.skidGain.connect(this.ctx.destination);
+                    this.skidOsc.start(0);
+
+                    this.isInitialized = true;
+                } catch(e) {
+                    console.warn("Web Audio API nie jest wspierane w tej przeglądarce", e);
+                }
+            }
+
+            update(rpm, isDrifting, speed) {
+                if (!this.isInitialized) return;
+                
+                // Uruchomienie kontekstu audio po interakcji z oknem
+                if (this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+
+                // Mapowanie RPM na częstotliwość dźwięku
+                let targetFreq = 30 + (rpm / CONFIG.engine.maxRpm) * 160;
+                this.oscillator.frequency.setTargetAtTime(targetFreq, this.ctx.currentTime, 0.05);
+
+                // Modulacja głośności na podstawie obrotów
+                let targetGain = 0.08 + (rpm / CONFIG.engine.maxRpm) * 0.12;
+                this.gainNode.gain.setTargetAtTime(targetGain, this.ctx.currentTime, 0.05);
+
+                // Zarządzanie piskami opon
+                if (isDrifting && Math.abs(speed) > 15) {
+                    let targetSkidVolume = Math.min((Math.abs(speed) / 100) * 0.15, 0.2);
+                    this.skidGain.gain.setTargetAtTime(targetSkidVolume, this.ctx.currentTime, 0.03);
+                    this.skidOsc.frequency.setTargetAtTime(350 + Math.random() * 50, this.ctx.currentTime, 0.01);
+                } else {
+                    this.skidGain.gain.setTargetAtTime(0, this.ctx.currentTime, 0.1);
+                }
+            }
+        }
+
+        // ============================================================================
+        // PEER-TO-PEER MULTIPLAYER MANAGER (PEERJS ENGINE)
+        // ============================================================================
+        class NetworkManager {
+            constructor() {
+                this.peer = null;
+                this.conn = null;
+                this.myId = null;
+                this.isConfigured = false;
+                this.lastPingTime = 0;
+            }
+
+            init() {
+                this.peer = new Peer();
+                
+                this.peer.on('open', (id) => {
+                    this.myId = id;
+                    document.getElementById('my-id-box').innerText = `Twoje ID: ${id}`;
+                    document.getElementById('net-status').innerText = "Status: Oczekiwanie na gracza...";
+                });
+
+                this.peer.on('connection', (connection) => {
+                    this.conn = connection;
+                    this.setupEvents();
+                });
+
+                document.getElementById('btn-connect').addEventListener('click', () => {
+                    const connectId = document.getElementById('join-id-input').value.trim();
+                    if (connectId) {
+                        document.getElementById('net-status').innerText = "Status: Nawiązywanie tunelu P2P...";
+                        this.conn = this.peer.connect(connectId);
+                        this.setupEvents();
+                    }
+                });
+            }
+
+            setupEvents() {
+                this.conn.on('open', () => {
+                    document.getElementById('net-status').innerText = "Status: POŁĄCZONO Z KLIENTEM!";
+                    document.getElementById('net-status').style.color = "var(--neon-cyan)";
+                    document.getElementById('ping-display').style.display = "block";
+                    remoteVehicle.visible = true;
+                    
+                    // Rozpoczęcie pętli Ping-Pong
+                    this.sendPing();
+                });
+
+                this.conn.on('data', (data) => {
+                    if (data.type === 'sync') {
+                        remoteVehicle.position.set(data.x, data.y, data.z);
+                        remoteVehicle.rotation.y = data.rotY;
+                    } else if (data.type === 'ping') {
+                        this.conn.send({ type: 'pong' });
+                    } else if (data.type === 'pong') {
+                        let latency = Date.now() - this.lastPingTime;
+                        document.getElementById('ping-display').innerText = `Ping P2P: ${latency} ms`;
+                        setTimeout(() => this.sendPing(), 1000); // Następny pomiar za sekundę
+                    }
+                });
+
+                this.conn.on('close', () => {
+                    document.getElementById('net-status').innerText = "Status: Rozłączono.";
+                    document.getElementById('net-status').style.color = "var(--neon-red)";
+                    remoteVehicle.visible = false;
+                });
+            }
+
+            sendPing() {
+                if (this.conn && this.conn.open) {
+                    this.lastPingTime = Date.now();
+                    this.conn.send({ type: 'ping' });
+                }
+            }
+
+            broadcastState(pos, rotY) {
+                if (this.conn && this.conn.open) {
+                    this.conn.send({
+                        type: 'sync',
+                        x: pos.x,
+                        y: pos.y,
+                        z: pos.z,
+                        rotY: rotY
+                    });
+                }
+            }
+        }
+
+        // ============================================================================
+        // PROCEDURALNY GENERATOR ŚWIATA I MIASTA (PROCEDURAL CITY GENERATOR)
+        // ============================================================================
+        class CityGenerator {
+            constructor() {
+                this.materials = {
+                    asphalt: new THREE.MeshStandardMaterial({ color: 0x11161b, roughness: 0.85 }),
+                    sidewalk: new THREE.MeshStandardMaterial({ color: 0x3a444d, roughness: 0.7 }),
+                    building: new THREE.MeshStandardMaterial({ color: 0x0f1b29, roughness: 0.5, metalness: 0.4 }),
+                    windowFace: new THREE.MeshStandardMaterial({ color: 0x05101a, roughness: 0.2 }),
+                    neonOrange: new THREE.MeshBasicMaterial({ color: 0xff9800 }),
+                    neonCyan: new THREE.MeshBasicMaterial({ color: 0x00e5ff })
+                };
+            }
+
+            generate(scene) {
+                const size = CONFIG.world.gridSize;
+                const cell = CONFIG.world.cellSize;
+                const halfSize = (size * cell) / 2;
+
+                // Główna płyta podłoża
+                const baseGeo = new THREE.PlaneGeometry(size * cell * 2, size * cell * 2);
+                const baseFloor = new THREE.Mesh(baseGeo, new THREE.MeshStandardMaterial({ color: 0x070d14, roughness: 0.95 }));
+                baseFloor.rotation.x = -Math.PI / 2;
+                baseFloor.receiveShadow = true;
+                scene.add(baseFloor);
+
+                // Pętla generowania siatki miejskiej
+                for (let x = -size/2; x < size/2; x++) {
+                    for (let z = -size/2; z < size/2; z++) {
+                        
+                        const posX = x * cell + cell/2;
+                        const posZ = z * cell + cell/2;
+
+                        // Wyznaczenie krzyżujących się korytarzy równego asfaltu (dróg miejskich)
+                        if (x === 0 || z === 0 || x % 3 === 0 || z % 3 === 0) {
+                            this.createRoadSegment(scene, posX, posZ, cell);
+                        } else {
+                            // Pozostałe kwartały siatki wypełniamy chodnikiem i wieżowcami
+                            this.createBuildingBlock(scene, posX, posZ, cell);
                         }
                     }
                 }
-
-                const forwardX = -Math.sin(carHeading);
-                const forwardZ = -Math.cos(carHeading);
-                const carForward = new THREE.Vector3(forwardX, 0, forwardZ).normalize();
-                const carRight = new THREE.Vector3(-forwardZ, 0, forwardX).normalize();
-
-                const currentForwardSpeed = carVelocity.dot(carForward);
-                const currentSideSpeed = carVelocity.dot(carRight);
-
-                // 2. Napęd i Hamowanie
-                let fDrive = 0;
-                let fBrake = 0;
                 
-                const isAccelerating = isMobile ? mobileInputs.gas : (keys.w || keys.arrowup);
-                const isBraking = isMobile ? mobileInputs.brake : (keys.s || keys.arrowdown);
+                // Oświetlenie uliczne (Latarnie miejskie) na głównych trasach
+                this.spawnStreetLights(scene);
+            }
 
-                if (isAccelerating) {
-                    fDrive = engineForce;
-                } else if (isBraking) {
-                    if (currentForwardSpeed > 0.2) {
-                        fBrake = brakingForce; 
-                    } else {
-                        fDrive = -engineForce / 2; 
+            createRoadSegment(scene, x, z, size) {
+                const roadGeo = new THREE.PlaneGeometry(size, size);
+                const road = new THREE.Mesh(roadGeo, this.materials.asphalt);
+                road.rotation.x = -Math.PI / 2;
+                road.position.set(x, 0.01, z);
+                road.receiveShadow = true;
+                scene.add(road);
+
+                // Teksturowanie pasów ruchu metodą geometryczną
+                const lineGeo = new THREE.PlaneGeometry(2, 0.3);
+                const line = new THREE.Mesh(lineGeo, new THREE.MeshBasicMaterial({ color: 0xffffff }));
+                line.rotation.x = -Math.PI / 2;
+                line.position.set(x, 0.02, z);
+                scene.add(line);
+            }
+
+            createBuildingBlock(scene, x, z, size) {
+                // Podstawa chodnika pod budynkiem
+                const sideGeo = new THREE.BoxGeometry(size - 4, 0.2, size - 4);
+                const sidewalk = new THREE.Mesh(sideGeo, this.materials.sidewalk);
+                sidewalk.position.set(x, 0.1, z);
+                sidewalk.receiveShadow = true;
+                scene.add(sidewalk);
+
+                // Losowanie decyzji o wysokości budynku z parametru gęstości
+                if (Math.random() < CONFIG.world.buildingDensity) {
+                    const bHeight = 15 + Math.random() * 45;
+                    const bWidth = size - 12;
+                    
+                    const bGeo = new THREE.BoxGeometry(bWidth, bHeight, bWidth);
+                    const building = new THREE.Mesh(bGeo, this.materials.building);
+                    building.position.set(x, bHeight / 2 + 0.2, z);
+                    building.castShadow = true;
+                    building.receiveShadow = true;
+                    scene.add(building);
+
+                    // Proceduralne świecące paski neonów na krawędziach wieżowca
+                    this.applyNeonTrim(scene, x, z, bWidth, bHeight);
+                }
+            }
+
+            applyNeonTrim(scene, x, z, w, h) {
+                const trimGeo = new THREE.BoxGeometry(0.4, h, 0.4);
+                const mat = Math.random() > 0.5 ? this.materials.neonCyan : this.materials.neonOrange;
+                
+                const trim1 = new THREE.Mesh(trimGeo, mat);
+                trim1.position.set(x - w/2, h/2 + 0.2, z - w/2);
+                scene.add(trim1);
+
+                const trim2 = new THREE.Mesh(trimGeo, mat);
+                trim2.position.set(x + w/2, h/2 + 0.2, z + w/2);
+                scene.add(trim2);
+            }
+
+            spawnStreetLights(scene) {
+                for (let i = -200; i <= 200; i += 50) {
+                    if (i === 0) continue;
+                    this.createLightPole(scene, i, 5);
+                    this.createLightPole(scene, 5, i);
+                }
+            }
+
+            createLightPole(scene, x, z) {
+                const poleGroup = new THREE.Group();
+                poleGroup.position.set(x, 0, z);
+
+                const poleGeo = new THREE.CylinderGeometry(0.1, 0.15, 6, 8);
+                const pole = new THREE.Mesh(poleGeo, this.materials.sidewalk);
+                pole.position.y = 3;
+                poleGroup.add(pole);
+
+                const lampGeo = new THREE.BoxGeometry(0.8, 0.2, 0.4);
+                const lamp = new THREE.Mesh(lampGeo, this.materials.windowFace);
+                lamp.position.set(0.3, 6, 0);
+                poleGroup.add(lamp);
+
+                // Fizyczny emiter światła Three.js dający nocny efekt gry
+                const pointLight = new THREE.PointLight(0xffea00, 0.9, 18, 1.5);
+                pointLight.position.set(0.3, 5.8, 0);
+                poleGroup.add(pointLight);
+
+                scene.add(poleGroup);
+            }
+        }
+
+        // ============================================================================
+        // INITIALIZATION AND ASSET MANAGEMENT (LOADER)
+        // ============================================================================
+        function initEngine() {
+            // Inicjalizacja zegara systemowego klatek renderera
+            clock = new THREE.Clock();
+
+            // Powołanie instancji obiektów systemów peryferyjnych
+            inputManager = new InputManager();
+            physicsEngine = new PhysicsEngine();
+            audioEngine = new AudioEngine();
+            networkManager = new NetworkManager();
+
+            // Definicja sceny 3D
+            scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0x0a1118, 0.0035);
+
+            // Kamera
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 2048);
+
+            // Wybór i konfiguracja silnika renderującego WebGL
+            renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+            // Doświetlenie globalne sceny (Ambient + directional)
+            const ambient = new THREE.AmbientLight(0xffffff, 0.22);
+            scene.add(ambient);
+
+            const sunLight = new THREE.DirectionalLight(0xaaccff, 0.4);
+            sunLight.position.set(250, 400, 150);
+            sunLight.castShadow = true;
+            sunLight.shadow.mapSize.width = 1024;
+            sunLight.shadow.mapSize.height = 1024;
+            scene.add(sunLight);
+
+            // Budowa struktur proceduralnych miasta
+            const city = new CityGenerator();
+            city.generate(scene);
+
+            // Budowanie geometrii pojazdów gracza i przeciwnika sieciowego
+            buildVehicles();
+
+            // Konfiguracja Menadżera Ładowania zasobów zewnętrznych (.obj / .mtl)
+            setupAssetLoader();
+
+            // Integracja zdarzeń przeglądarki
+            window.addEventListener('resize', onWindowResize);
+            document.body.addEventListener('click', () => {
+                if(!audioEngine.isInitialized) {
+                    audioEngine.init();
+                }
+            });
+
+            // Uruchomienie sieci P2P PeerJS
+            networkManager.init();
+
+            // Ukrycie interfejsu ładowania początkowego systemu po wygenerowaniu struktur
+            setTimeout(() => {
+                document.getElementById('loader-overlay').style.display = 'none';
+            }, 1200);
+
+            // Skok do pętli głównej silnika
+            renderLoop();
+        }
+
+        function buildVehicles() {
+            // Tworzenie geometrii lokalnego gracza
+            playerVehicle = createFallbackGeometry(0x0d1117); // Sportowa czerń satynowa
+            scene.add(playerVehicle);
+
+            // Geometria gracza zdalnego w pokoju multiplayer
+            remoteVehicle = createFallbackGeometry(0xd90429); // Sportowa czerń czerwona
+            remoteVehicle.visible = false;
+            scene.add(remoteVehicle);
+        }
+
+        function createFallbackGeometry(colorHex) {
+            const containerGroup = new THREE.Group();
+            
+            const bodyMat = new THREE.MeshStandardMaterial({ color: colorHex, roughness: 0.2, metalness: 0.8 });
+            const wheelMat = new THREE.MeshStandardMaterial({ color: 0x14191f, roughness: 0.85 });
+            const glassMat = new THREE.MeshStandardMaterial({ color: 0x00e5ff, transparent: true, opacity: 0.55 });
+            const neonOrangeMat = new THREE.MeshBasicMaterial({ color: 0xff9800 });
+
+            // Podwozie / Konstrukcja dolna ramy pojazdu
+            const chasis = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.4, 4.2), bodyMat);
+            chasis.position.y = 0.4;
+            chasis.castShadow = true;
+            chasis.receiveShadow = true;
+            containerGroup.add(chasis);
+
+            // Nadwozie / Struktura kabiny pasażerskiej
+            const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.6, 2.2), glassMat);
+            cabin.position.set(0, 0.9, -0.2);
+            cabin.castShadow = true;
+            containerGroup.add(cabin);
+
+            // Elementy ozdobne (Pomarańczowe panele nawiązujące do hulajnogi Kamikaze)
+            const trimLeft = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.2, 1.5), neonOrangeMat);
+            trimLeft.position.set(-0.96, 0.4, 0);
+            containerGroup.add(trimLeft);
+
+            const trimRight = trimLeft.clone();
+            trimRight.position.x = 0.96;
+            containerGroup.add(trimRight);
+
+            // Koła jezdne (Masywne, terenowe)
+            const wGeo = new THREE.CylinderGeometry(0.45, 0.45, 0.45, 32);
+            const wPositions = [
+                [-1.0, 0.45, 1.3],  // Przód Lewy
+                [1.0, 0.45, 1.3],   // Przód Prawy
+                [-1.0, 0.45, -1.3], // Tył Lewy
+                [1.0, 0.45, -1.3]   // Tył Prawy
+            ];
+
+            wPositions.forEach((pos, index) => {
+                const wheelMesh = new THREE.Mesh(wGeo, wheelMat);
+                wheelMesh.rotation.z = Math.PI / 2;
+                wheelMesh.position.set(pos[0], pos[1], pos[2]);
+                wheelMesh.castShadow = true;
+                // Nadanie nazw węzłom koła w celu ich późniejszego obracania/skręcania animacyjnego
+                wheelMesh.name = `wheel_${index}`;
+                containerGroup.add(wheelMesh);
+            });
+
+            return containerGroup;
+        }
+
+        // ============================================================================
+        // INTEGRACJA MODELI OBJ/MTL OD AI (KAMIKAZE SCOOTER LOADER)
+        // ============================================================================
+        function setupAssetLoader() {
+            loadingManager.onProgress = function (item, loaded, total) {
+                let progress = (loaded / total) * 100;
+                document.getElementById('progress-bar').style.width = progress + '%';
+            };
+
+            loadingManager.onLoad = function () {
+                console.log("Wszystkie tekstury i modele 3D zostały poprawnie wczytane.");
+            };
+
+            // INSTALATOR PLIKÓW OBJ/MTL
+            // Jeśli wygenerowałeś hulajnogę o nazwie "scooter.obj" oraz "scooter.mtl", 
+            // wrzuć je do tego samego katalogu i odkomentuj poniższe wywołanie funkcji:
+            
+            // injectCustomOBJModel('scooter.mtl', 'scooter.obj');
+        }
+
+        function injectCustomOBJModel(mtlUrl, objUrl) {
+            document.getElementById('loader-overlay').style.display = 'flex';
+            document.getElementById('loader-text').innerText = "Wczytywanie geometrii wygenerowanej przez AI...";
+
+            const mtlLoader = new THREE.MTLLoader(loadingManager);
+            mtlLoader.load(mtlUrl, (materials) => {
+                materials.preload();
+                
+                const objLoader = new THREE.OBJLoader(loadingManager);
+                objLoader.setMaterials(materials);
+                objLoader.load(objUrl, (object3D) => {
+                    
+                    // Usunięcie domyślnej geometrii zastępczej z kontenera gracza
+                    while(playerVehicle.children.length > 0) { 
+                        playerVehicle.remove(playerVehicle.children[0]); 
+                    }
+
+                    // Skalowanie, orientacja osi obrotu i wycentrowanie modelu hulajnogi na siatce fizyki
+                    object3D.scale.set(0.6, 0.6, 0.6);
+                    object3D.position.set(0, 0, 0);
+                    object3D.traverse((node) => {
+                        if (node.isMesh) {
+                            node.castShadow = true;
+                            node.receiveShadow = true;
+                        }
+                    });
+
+                    playerVehicle.add(object3D);
+                    document.getElementById('loader-overlay').style.display = 'none';
+                });
+            });
+        }
+
+        // ============================================================================
+        // CYKLICZNA PĘTLA DYNAMICZNA RENDERINGU (MAIN LOOP ENGINE)
+        // ============================================================================
+        function renderLoop() {
+            requestAnimationFrame(renderLoop);
+
+            // Wyznaczanie czasu delty deltatime pomiędzy klatkami
+            const dt = clock.getDelta();
+
+            // Krok obliczeniowy fizyki pojazdu lokalnego
+            physicsEngine.update(dt, inputManager.controls);
+
+            // Aktualizacja współrzędnych węzła graficznego transformacji Three.js
+            playerVehicle.position.copy(physicsEngine.position);
+            playerVehicle.rotation.y = physicsEngine.heading;
+
+            // Animacja obrotowa kół na podstawie obliczeń prędkości oraz skręcania kierownicy
+            animateVehicleWheels(dt);
+
+            // Aktualizacja strumienia audio
+            audioEngine.update(physicsEngine.rpm, physicsEngine.isDrifting, physicsEngine.speedKMH);
+
+            // Transmisja stanów pozycyjnych przez sieć do drugiego klienta
+            networkManager.broadcastState(playerVehicle.position, playerVehicle.rotation.y);
+
+            // Renderowanie interfejsu użytkownika (HUD Telemetria)
+            updateUserInterface();
+
+            // Pozycjonowanie kamery (System śledzenia TPP / FPP)
+            updateCameraPosition();
+
+            // Render klatki sceny 3D
+            renderer.render(scene, camera);
+        }
+
+        function animateVehicleWheels(dt) {
+            // Rotacja kół na osiach obrotu przy ruchu postępowym pojazdu
+            const rotationSpeed = (physicsEngine.speedKMH / 3.6) / 0.45; // v / r
+            
+            playerVehicle.traverse((child) => {
+                if (child.isMesh && child.name.startsWith('wheel_')) {
+                    child.rotation.x += rotationSpeed * dt;
+                    
+                    // Dodatkowy kąt skrętu dla kół przednich (indeksy 0 i 1)
+                    if (child.name === 'wheel_0' || child.name === 'wheel_1') {
+                        child.rotation.y = physicsEngine.steerAngle;
                     }
                 }
-
-                const fDragX = -dragCoeff * carVelocity.x * Math.abs(carVelocity.x);
-                const fDragZ = -dragCoeff * carVelocity.z * Math.abs(carVelocity.z);
-                const fRrX = -rrCoeff * carVelocity.x;
-                const fRrZ = -rrCoeff * carVelocity.z;
-
-                const fTractionX = carForward.x * fDrive - carForward.x * fBrake * Math.sign(currentForwardSpeed);
-                const fTractionZ = carForward.z * fDrive - carForward.z * fBrake * Math.sign(currentForwardSpeed);
-
-                const totalForceX = fTractionX + fDragX + fRrX;
-                const totalForceZ = fTractionZ + fDragZ + fRrZ;
-
-                carVelocity.x += (totalForceX / mass) * dt;
-                carVelocity.z += (totalForceZ / mass) * dt;
-
-                // 3. Fizyka Uślizgu Opon (Sideslip / Drift)
-                sideSlip = currentSideSpeed;
-                let gripElasticity = 12.0; 
-                
-                if (Math.abs(sideSlip) > 3.5) {
-                    isDrifting = true;
-                    gripElasticity = 4.2; 
-                    document.getElementById('gripState').textContent = "POŚLIZG (Drift)";
-                    document.getElementById('gripState').style.color = "#ff3333";
-                } else {
-                    isDrifting = false;
-                    document.getElementById('gripState').textContent = "Stabilny";
-                    document.getElementById('gripState').style.color = "#4caf50";
-                }
-
-                const lateralFrictionX = -carRight.x * sideSlip * gripElasticity;
-                const lateralFrictionZ = -carRight.z * sideSlip * gripElasticity;
-
-                carVelocity.x += lateralFrictionX * dt;
-                carVelocity.z += lateralFrictionZ * dt;
-
-                const turnRadiusVelocity = currentForwardSpeed / wheelBase;
-                carHeading += steerAngle * turnRadiusVelocity * dt;
-
-                if (isDrifting) {
-                    carHeading += (sideSlip * 0.02); 
-                }
-
-                carPos.addScaledVector(carVelocity, 1);
-                car.position.copy(carPos);
-                car.rotation.y = carHeading;
-
-                // 4. Elastyczna kamera TPP z ugięciem pędu
-                if (camView === 'TPP') {
-                    const targetCamDist = 7.5;
-                    const targetCamHeight = 2.4;
-                    
-                    const desiredCamX = car.position.x + Math.sin(carHeading) * targetCamDist;
-                    const desiredCamZ = car.position.z + Math.cos(carHeading) * targetCamDist;
-                    const desiredCamY = car.position.y + targetCamHeight;
-
-                    camera.position.x += (desiredCamX - camera.position.x) * 0.1;
-                    camera.position.z += (desiredCamZ - camera.position.z) * 0.1;
-                    camera.position.y += (desiredCamY - camera.position.y) * 0.1;
-                    
-                    camera.lookAt(
-                        car.position.x - carVelocity.x * 0.15, 
-                        car.position.y + 0.5, 
-                        car.position.z - carVelocity.z * 0.15
-                    );
-                } else {
-                    camera.position.set(car.position.x, car.position.y + 80, car.position.z);
-                    camera.lookAt(car.position.x, car.position.y, car.position.z);
-                }
-                
-                const speedDisplay = document.getElementById('speed');
-                if(speedDisplay) {
-                    const kmh = Math.round(Math.abs(currentForwardSpeed) * 1);
-                    speedDisplay.textContent = kmh;
-                }
-
-                broadcast({
-                    type: 'update_position',
-                    pos: { x: car.position.x, y: car.position.y, z: car.position.z },
-                    rot: { x: car.rotation.x, y: car.rotation.y, z: car.rotation.z }
-                });
-                
-                renderer.render(scene, camera);
-            }
-            animate();
+            });
         }
-        
-        document.querySelector('.carOption[data-car="bmw_m5"]').classList.add('selected');
-        document.querySelector('.mapOption[data-map="miasto"]').classList.add('selected');
+
+        function updateUserInterface() {
+            // Aktualizacja zmiennych numerycznych HUD
+            document.getElementById('hud-speed').innerText = Math.round(Math.abs(physicsEngine.speedKMH));
+            document.getElementById('hud-gear').innerText = physicsEngine.currentGear === 'R' ? 'R' : physicsEngine.currentGear;
+            
+            const numericRpmBox = document.getElementById('hud-rpm-numeric');
+            numericRpmBox.innerText = `${Math.round(physicsEngine.rpm)} RPM`;
+
+            // Zarządzanie paskiem obrotomierza Tacho
+            const tachoBar = document.getElementById('tacho-bar');
+            const rpmPercentage = (physicsEngine.rpm / CONFIG.engine.maxRpm) * 100;
+            tachoBar.style.width = `${rpmPercentage}%`;
+
+            if (physicsEngine.isRevLimiterActive || physicsEngine.rpm > CONFIG.engine.redlineRpm) {
+                numericRpmBox.className = "rev-limiter";
+            } else {
+                numericRpmBox.className = "";
+            }
+
+            // Stan przyczepności opon
+            const gripBox = document.getElementById('hud-grip');
+            if (physicsEngine.isDrifting) {
+                gripBox.innerText = "ZERWANA (DRIFT)";
+                gripBox.style.color = "var(--neon-red)";
+            } else {
+                gripBox.innerText = "NOMINALNY";
+                gripBox.style.color = "#00ff66";
+            }
+
+            // Wskaźnik przeciążeń G-Force (Ruch punktu centralnego)
+            const gDot = document.getElementById('g-dot');
+            // Przeliczenie ograniczeń pikselowych układu kółka HUD
+            let clampX = Math.max(Math.min(27 + (physicsEngine.gForceX * 25), 52), 2);
+            let clampY = Math.max(Math.min(27 - (physicsEngine.gForceY * 25), 52), 2);
+            gDot.style.left = `${clampX}px`;
+            gDot.style.top = `${clampY}px`;
+        }
+
+        function updateCameraPosition() {
+            if (!inputManager.controls.cameraToggle) {
+                // TRYB TRADYCYJNY: Trzecia osoba (TPP Tracking)
+                const backOffset = new THREE.Vector3(
+                    -Math.sin(physicsEngine.heading) * 10.5,
+                    3.8,
+                    -Math.cos(physicsEngine.heading) * 10.5
+                );
+                const idealCameraPosition = physicsEngine.position.clone().add(backOffset);
+                
+                // Liniowa interpolacja pozycji kamery dająca płynny kinowy efekt ruchu zawieszenia
+                camera.position.lerp(idealCameraPosition, 0.08);
+                camera.lookAt(physicsEngine.position.clone().add(new THREE.Vector3(0, 0.7, 0)));
+            } else {
+                // TRYB ALTERNATYWNY: Widok z maski/Zderzaka pojazdu (FPP)
+                const frontOffset = new THREE.Vector3(
+                    Math.sin(physicsEngine.heading) * 1.8,
+                    0.9,
+                    Math.cos(physicsEngine.heading) * 1.8
+                );
+                camera.position.copy(physicsEngine.position).add(frontOffset);
+                
+                const lookTarget = physicsEngine.position.clone().add(
+                    new THREE.Vector3(Math.sin(physicsEngine.heading)*20, 0.6, Math.cos(physicsEngine.heading)*20)
+                );
+                camera.lookAt(lookTarget);
+            }
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // Uruchomienie procedury startu głównego silnika po załadowaniu drzewa DOM
+        window.onload = () => {
+            initEngine();
+        };
     </script>
 </body>
 </html>
