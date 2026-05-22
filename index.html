@@ -629,7 +629,7 @@
         const roomIdInput = document.getElementById('roomIdInput');
         const errorMessage = document.getElementById('errorMessage');
         
-        // POPRAWIONA NAZWA PLIKU NA bmw_m5.glb
+        // POPRAWIONA NAZWA PLIKU
         const carConfigs = {
             'bmw_m5': { path: 'bmw_m5.glb' },
             'porsche_911': { path: 'porsche.glb' }
@@ -665,7 +665,6 @@
             const gasPedal = document.getElementById('gasPedal');
             const brakePedal = document.getElementById('brakePedal');
             
-            // Joystick logic
             joystickZone.addEventListener('touchstart', handleJoystick);
             joystickZone.addEventListener('touchmove', handleJoystick);
             joystickZone.addEventListener('touchend', () => {
@@ -690,11 +689,9 @@
                 }
                 
                 joystickStick.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
-                // Przekazanie wartości skrętu w zakresie od -1 do 1
                 mobileInputs.steer = deltaX / maxDistance;
             }
             
-            // Pedały
             gasPedal.addEventListener('touchstart', (e) => { e.preventDefault(); mobileInputs.gas = true; });
             gasPedal.addEventListener('touchend', () => { mobileInputs.gas = false; });
             brakePedal.addEventListener('touchstart', (e) => { e.preventDefault(); mobileInputs.brake = true; });
@@ -879,7 +876,6 @@
         function generateProceduralMap() {
             const mapGroup = new THREE.Group();
 
-            // Podłoże (Trawa)
             const grassGeo = new THREE.PlaneGeometry(3000, 3000);
             const grassMat = new THREE.MeshStandardMaterial({ color: 0x3b7a57, roughness: 0.95 });
             const grass = new THREE.Mesh(grassGeo, grassMat);
@@ -887,7 +883,7 @@
             grass.receiveShadow = true;
             mapGroup.add(grass);
 
-            // Punkty kontrolne dla drogi podmiejskiej (Krzywa Catmull-Rom)
+            // Naturalne ułożenie punktów drogi podmiejskiej (Krzywa Catmull-Rom)
             const curvePoints = [
                 new THREE.Vector3(0, 0, 0),
                 new THREE.Vector3(60, 0, 120),
@@ -905,7 +901,7 @@
             const roadCurve = new THREE.CatmullRomCurve3(curvePoints);
             roadCurve.closed = true;
 
-            const roadWidth = 12; // Dwupasmowa szosa
+            const roadWidth = 12; 
             const tubularSegments = 400;
 
             const extrudeSettings = {
@@ -932,7 +928,7 @@
             roadMesh.receiveShadow = true;
             mapGroup.add(roadMesh);
 
-            // Generowanie linii poziomych na asfalcie
+            // Nanoszenie linii przerywanych i ciągłych na asfalt
             const samplingPoints = roadCurve.getPoints(tubularSegments * 2);
             
             for(let i = 0; i < samplingPoints.length - 1; i++) {
@@ -943,7 +939,7 @@
                 const up = new THREE.Vector3(0, 1, 0);
                 const side = new THREE.Vector3().crossVectors(dir, up).normalize();
 
-                // Przerywana linia środkowa
+                // Przerywana oś jezdni
                 if(i % 4 === 0) {
                     const dashGeo = new THREE.BoxGeometry(0.18, 0.01, 2.5);
                     const dashMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
@@ -959,13 +955,11 @@
                     const sideLineGeo = new THREE.BoxGeometry(0.12, 0.01, 1.6);
                     const sideLineMat = new THREE.MeshBasicMaterial({ color: 0xdddddd });
                     
-                    // Lewa strona
                     const leftLine = new THREE.Mesh(sideLineGeo, sideLineMat);
                     leftLine.position.copy(pt).add(side.clone().multiplyScalar(roadWidth / 2 - 0.2)).add(new THREE.Vector3(0, 0.04, 0));
                     leftLine.lookAt(nextPt.clone().add(side.clone().multiplyScalar(roadWidth / 2 - 0.2)));
                     mapGroup.add(leftLine);
 
-                    // Prawa strona
                     const rightLine = new THREE.Mesh(sideLineGeo, sideLineMat);
                     rightLine.position.copy(pt).add(side.clone().multiplyScalar(-roadWidth / 2 + 0.2)).add(new THREE.Vector3(0, 0.04, 0));
                     rightLine.lookAt(nextPt.clone().add(side.clone().multiplyScalar(-roadWidth / 2 + 0.2)));
@@ -973,7 +967,7 @@
                 }
             }
 
-            // Roślinność (Drzewa) rozrzucona bezpiecznie wokół drogi
+            // Las wokół szosy
             const trunkGeo = new THREE.CylinderGeometry(0.25, 0.35, 3, 6);
             const leavesGeo = new THREE.DodecahedronGeometry(1.6, 1);
             const trunkMat = new THREE.MeshStandardMaterial({ color: 0x4a3b32, roughness: 0.9 });
@@ -1067,7 +1061,6 @@
                 },
                 undefined,
                 (error) => {
-                    // Fallback w razie braku modelu .glb
                     const boxGeom = new THREE.BoxGeometry(1.8, 0.9, 4);
                     const boxMat = new THREE.MeshStandardMaterial({color: 0x2ecc71, roughness: 0.5});
                     car = new THREE.Mesh(boxGeom, boxMat);
@@ -1091,14 +1084,10 @@
                 
                 if (!isGameReady || !car || !scene || !camera || !renderer) return;
                 
-                // --- REALISTYCZNE OBLICZENIA FIZYKI KOŁOWEJ SAMOCHODU ---
-                
-                // 1. Wyznaczenie pożądanego kierunku skrętu (Klawiatura lub Mobilny Joystick)
+                // 1. Obliczenie kierunku skrętu (Klawiatura lub Mobilny Joystick)
                 if (isMobile) {
-                    // Bezpośrednie przypisanie z osi X joysticka z wygładzeniem bezwładności opon
                     steerAngle = -mobileInputs.steer * maxSteerAngle;
                 } else {
-                    // Klawiatura - płynne kręcenie kierownicą
                     if (keys.a || keys.arrowleft) {
                         steerAngle += steerSpeed;
                         if (steerAngle > maxSteerAngle) steerAngle = maxSteerAngle;
@@ -1116,7 +1105,6 @@
                     }
                 }
 
-                // Wektory kierunkowe nadwozia
                 const forwardX = -Math.sin(carHeading);
                 const forwardZ = -Math.cos(carHeading);
                 const carForward = new THREE.Vector3(forwardX, 0, forwardZ).normalize();
@@ -1125,7 +1113,7 @@
                 const currentForwardSpeed = carVelocity.dot(carForward);
                 const currentSideSpeed = carVelocity.dot(carRight);
 
-                // 2. Siła Napędu i Hamowania (Klawiatura vs Przyciski ekranowe)
+                // 2. Napęd i Hamowanie
                 let fDrive = 0;
                 let fBrake = 0;
                 
@@ -1138,17 +1126,15 @@
                     if (currentForwardSpeed > 0.2) {
                         fBrake = brakingForce; 
                     } else {
-                        fDrive = -engineForce / 2; // Wsteczny bieg
+                        fDrive = -engineForce / 2; 
                     }
                 }
 
-                // Opory zewnętrzne
                 const fDragX = -dragCoeff * carVelocity.x * Math.abs(carVelocity.x);
                 const fDragZ = -dragCoeff * carVelocity.z * Math.abs(carVelocity.z);
                 const fRrX = -rrCoeff * carVelocity.x;
                 const fRrZ = -rrCoeff * carVelocity.z;
 
-                // Siły osiowe wzdłużne
                 const fTractionX = carForward.x * fDrive - carForward.x * fBrake * Math.sign(currentForwardSpeed);
                 const fTractionZ = carForward.z * fDrive - carForward.z * fBrake * Math.sign(currentForwardSpeed);
 
@@ -1164,7 +1150,7 @@
                 
                 if (Math.abs(sideSlip) > 3.5) {
                     isDrifting = true;
-                    gripElasticity = 4.2; // Spadek tarcia opon o nawierzchnię asfaltu
+                    gripElasticity = 4.2; 
                     document.getElementById('gripState').textContent = "POŚLIZG (Drift)";
                     document.getElementById('gripState').style.color = "#ff3333";
                 } else {
@@ -1173,27 +1159,24 @@
                     document.getElementById('gripState').style.color = "#4caf50";
                 }
 
-                // Likwidacja siły bocznej w zależności od przyczepności opon
                 const lateralFrictionX = -carRight.x * sideSlip * gripElasticity;
                 const lateralFrictionZ = -carRight.z * sideSlip * gripElasticity;
 
                 carVelocity.x += lateralFrictionX * dt;
                 carVelocity.z += lateralFrictionZ * dt;
 
-                // Wyliczenie kąta rotacji bryły pojazdu względem kół skrętnych
                 const turnRadiusVelocity = currentForwardSpeed / wheelBase;
                 carHeading += steerAngle * turnRadiusVelocity * dt;
 
                 if (isDrifting) {
-                    carHeading += (sideSlip * 0.02); // Nadsterowność powoduje mocniejsze zarzucanie tyłu
+                    carHeading += (sideSlip * 0.02); 
                 }
 
-                // Aktualizacja koordynatów
                 carPos.addScaledVector(carVelocity, 1);
                 car.position.copy(carPos);
                 car.rotation.y = carHeading;
 
-                // 4. Inteligentna kamera TPP z ugięciem pędu
+                // 4. Elastyczna kamera TPP z ugięciem pędu
                 if (camView === 'TPP') {
                     const targetCamDist = 7.5;
                     const targetCamHeight = 2.4;
@@ -1216,14 +1199,12 @@
                     camera.lookAt(car.position.x, car.position.y, car.position.z);
                 }
                 
-                // Licznik kilometrów na godzinę
                 const speedDisplay = document.getElementById('speed');
                 if(speedDisplay) {
                     const kmh = Math.round(Math.abs(currentForwardSpeed) * 3.6);
                     speedDisplay.textContent = kmh;
                 }
 
-                // Rozsyłanie współrzędnych P2P do sieci Multiplayer
                 broadcast({
                     type: 'update_position',
                     pos: { x: car.position.x, y: car.position.y, z: car.position.z },
@@ -1235,7 +1216,6 @@
             animate();
         }
         
-        // Zaznaczenia domyślne menu
         document.querySelector('.carOption[data-car="bmw_m5"]').classList.add('selected');
         document.querySelector('.mapOption[data-map="miasto"]').classList.add('selected');
     </script>
