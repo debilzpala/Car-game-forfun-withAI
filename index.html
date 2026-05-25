@@ -230,46 +230,86 @@
         <!-- MULTIPLAYER MENU -->
         <div class="menu-frame interactive" id="screen-mp-menu" style="display:none;">
             <div class="menu-title" style="font-size:22px;">Multiplayer</div>
-            <div class="menu-subtitle">Wybierz tryb połączenia</div>
-            <button class="cyber-btn" onclick="CoreEngine.UIManager.showScreen('screen-mp-create')" style="margin-top:25px;">Stwórz Lobby</button>
-            <button class="cyber-btn" onclick="CoreEngine.UIManager.showScreen('screen-mp-join')" style="border-color:var(--neon-purple);background:rgba(157,78,221,0.08);">Dołącz do Lobby</button>
+            <div class="menu-subtitle">WebRTC P2P — Google STUN</div>
+            <button class="cyber-btn" onclick="CoreEngine.NetCore.initHost()" style="margin-top:25px;">HOST — Stwórz Lobby</button>
+            <button class="cyber-btn" onclick="CoreEngine.UIManager.showScreen('screen-mp-join')" style="border-color:var(--neon-purple);background:rgba(157,78,221,0.08);">GRACZ — Dołącz</button>
             <button class="cyber-btn" onclick="CoreEngine.UIManager.showScreen('screen-main')" style="border-color:#334;background:transparent;color:#6080a0;margin-top:6px;">Wróć</button>
         </div>
 
-        <!-- STWÓRZ LOBBY -->
-        <div class="menu-frame interactive" id="screen-mp-create" style="display:none;">
-            <div class="menu-title" style="font-size:22px;">Stwórz Lobby</div>
-            <div class="menu-subtitle">Twój kod sesji</div>
-            <div style="margin:20px 0;padding:20px;border:2px solid var(--neon-cyan);border-radius:10px;background:rgba(0,229,255,0.05);">
-                <div style="font-size:11px;color:#5280a3;letter-spacing:2px;margin-bottom:8px;">KOD LOBBY</div>
-                <div id="lobby-code-display" style="font-size:42px;font-weight:900;letter-spacing:10px;color:#fff;text-shadow:0 0 20px rgba(0,229,255,0.5);">----</div>
+        <!-- HOST LOBBY -->
+        <div class="menu-frame interactive" id="screen-mp-host" style="display:none;">
+            <div class="menu-title" style="font-size:18px;">HOST LOBBY</div>
+            <div class="menu-subtitle" id="host-step-label">Krok 1: Generowanie Offer...</div>
+
+            <!-- KROK 1: Offer do wysłania -->
+            <div id="host-step1" style="display:none;">
+                <div style="font-size:11px;color:#5280a3;margin-bottom:6px;">SKOPIUJ I WYŚLIJ GRACZOWI:</div>
+                <textarea id="host-offer-out" readonly
+                    style="width:100%;height:80px;background:rgba(0,229,255,0.04);border:1px solid #005f73;
+                    border-radius:8px;color:#7ec8d8;font-size:9px;font-family:inherit;padding:8px;
+                    box-sizing:border-box;resize:none;"></textarea>
+                <button class="cyber-btn" style="margin-top:6px;padding:10px;" onclick="CoreEngine.NetCore.copyToClipboard('host-offer-out')">📋 Kopiuj Offer</button>
+                <div style="font-size:11px;color:#5280a3;margin-top:14px;margin-bottom:6px;">WKLEJ ANSWER OD GRACZA:</div>
+                <textarea id="host-answer-in" placeholder="Wklej answer tutaj..."
+                    style="width:100%;height:80px;background:rgba(157,78,221,0.04);border:1px solid #4a1a7a;
+                    border-radius:8px;color:#c89eff;font-size:9px;font-family:inherit;padding:8px;
+                    box-sizing:border-box;resize:none;"></textarea>
+                <button class="cyber-btn" style="margin-top:6px;" onclick="CoreEngine.NetCore.hostReceiveAnswer()">Zastosuj Answer</button>
             </div>
-            <div id="lobby-waiting-status" style="font-size:12px;color:#507a99;letter-spacing:1px;margin-bottom:10px;">Oczekiwanie na graczy...</div>
-            <div class="garage-grid" id="dom-garage-grid-mp-create"></div>
-            <button class="cyber-btn" id="mp-create-start-btn" onclick="CoreEngine.SystemManager.bootSequence()" style="display:none;">Start Gry</button>
+
+            <!-- KROK 2: Czekaj na połączenie -->
+            <div id="host-step2" style="display:none;text-align:center;padding:20px 0;">
+                <div style="font-size:28px;margin-bottom:10px;">⏳</div>
+                <div id="host-conn-status" style="color:#507a99;font-size:12px;letter-spacing:1px;">Oczekiwanie na połączenie...</div>
+            </div>
+
+            <!-- KROK 3: Połączono — wybór auta -->
+            <div id="host-step3" style="display:none;">
+                <div style="color:var(--neon-green);font-size:12px;margin-bottom:10px;">✓ Połączono!</div>
+                <div id="host-peers-list" style="font-size:11px;color:#507a99;margin-bottom:10px;"></div>
+                <div class="garage-grid" id="dom-garage-grid-mp-host"></div>
+                <button class="cyber-btn" onclick="CoreEngine.NetCore.hostStartGame()">Start Gry</button>
+            </div>
+
             <button class="cyber-btn" onclick="CoreEngine.UIManager.showScreen('screen-mp-menu')" style="border-color:#334;background:transparent;color:#6080a0;margin-top:6px;">Wróć</button>
         </div>
 
-        <!-- DOŁĄCZ DO LOBBY -->
+        <!-- GRACZ DOŁĄCZA -->
         <div class="menu-frame interactive" id="screen-mp-join" style="display:none;">
-            <div class="menu-title" style="font-size:22px;">Dołącz</div>
-            <div class="menu-subtitle">Wpisz kod od znajomego</div>
-            <div style="margin:20px 0;">
-                <input id="lobby-code-input" type="text" maxlength="4"
-                    style="width:100%;text-align:center;font-size:38px;font-weight:900;letter-spacing:12px;
-                    background:rgba(0,229,255,0.05);border:2px solid var(--neon-cyan);border-radius:10px;
-                    color:#fff;padding:16px;box-sizing:border-box;font-family:inherit;outline:none;text-transform:uppercase;"
-                    placeholder="XXXX"
+            <div class="menu-title" style="font-size:18px;">DOŁĄCZ DO LOBBY</div>
+            <div class="menu-subtitle" id="join-step-label">Krok 1: Wklej Offer od Hosta</div>
+
+            <!-- KROK 1: Wklej offer hosta -->
+            <div id="join-step1">
+                <div style="font-size:11px;color:#5280a3;margin-bottom:6px;">WPISZ KOD LOBBY (9 znaków):</div>
+                <input id="join-code-input" type="text" maxlength="9" placeholder="ABC123XYZ"
+                    style="width:100%;text-align:center;font-size:28px;font-weight:900;letter-spacing:6px;
+                    background:rgba(0,229,255,0.04);border:2px solid #005f73;border-radius:10px;
+                    color:#fff;padding:14px;box-sizing:border-box;font-family:inherit;outline:none;
+                    text-transform:uppercase;margin-bottom:12px;"
                     oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')"
                 />
+                <button class="cyber-btn" onclick="CoreEngine.NetCore.joinLobby()">Połącz</button>
             </div>
-            <button class="cyber-btn" onclick="CoreEngine.UIManager.joinLobby()">Połącz</button>
-            <!-- Wybor auta po dołączeniu -->
-            <div id="screen-mp-join-cars" style="display:none;">
-                <div class="menu-subtitle" style="margin-top:15px;">Wybierz pojazd</div>
+
+            <!-- KROK 2: Answer do odesłania -->
+            <div id="join-step2" style="display:none;">
+                <div style="font-size:11px;color:#5280a3;margin-bottom:6px;">SKOPIUJ I WYŚLIJ HOSTOWI:</div>
+                <textarea id="join-answer-out" readonly
+                    style="width:100%;height:80px;background:rgba(157,78,221,0.04);border:1px solid #4a1a7a;
+                    border-radius:8px;color:#c89eff;font-size:9px;font-family:inherit;padding:8px;
+                    box-sizing:border-box;resize:none;"></textarea>
+                <button class="cyber-btn" style="margin-top:6px;padding:10px;" onclick="CoreEngine.NetCore.copyToClipboard('join-answer-out')">📋 Kopiuj Answer</button>
+                <div id="join-conn-status" style="color:#507a99;font-size:12px;margin-top:12px;">Oczekiwanie na połączenie...</div>
+            </div>
+
+            <!-- KROK 3: Połączono — wybór auta -->
+            <div id="join-step3" style="display:none;">
+                <div style="color:var(--neon-green);font-size:12px;margin-bottom:10px;">✓ Połączono z hostem!</div>
                 <div class="garage-grid" id="dom-garage-grid-mp-join"></div>
-                <button class="cyber-btn" onclick="CoreEngine.SystemManager.bootSequence()">Gotowy</button>
+                <button class="cyber-btn" onclick="CoreEngine.NetCore.joinReady()">Gotowy</button>
             </div>
+
             <button class="cyber-btn" onclick="CoreEngine.UIManager.showScreen('screen-mp-menu')" style="border-color:#334;background:transparent;color:#6080a0;margin-top:6px;">Wróć</button>
         </div>
     </div>
@@ -378,7 +418,7 @@
                 {
                     id: 1,
                     name: "Porsche 911 Turbo",
-                    file: "porshe.glb",
+                    file: "porsche.glb",
                     mass: 1470,
                     maxForce: 10500,
                     maxSpeed: 315,
@@ -398,10 +438,10 @@
                 {
                     id: 2,
                     name: "Kamikaze K1",
-                    file: "Kamikaze.glb",
-                    mass: 27,
+                    file: "kamikaze.glb",
+                    mass: 48,
                     maxForce: 1100,
-                    maxSpeed: 55,
+                    maxSpeed: 82,
                     dragCoeff: 0.65, // Duży opór powietrza kierowcy stojącego na hulajnodze
                     wheelBase: 1.15,
                     steerSpeed: 0.04,
@@ -441,6 +481,240 @@
                 resources: {
                     loadedVehicleMesh: null,
                     particleSystems: []
+                }
+            },
+
+            // ====================================================================
+            // MODUŁ SIECIOWY — WebRTC P2P + Signaling Server
+            // ====================================================================
+            NetCore: {
+                ws: null,
+                pc: null,
+                dataChannel: null,
+                isHost: false,
+                lobbyCode: null,
+                connectedPeers: [],
+                signalingServerURL: '147.135.128.19:20088', // ← TU WSTAW SWÓJ REPLIT URL
+
+                iceServers: [
+                    { urls: 'stun:stun.l.google.com:19302' },
+                    { urls: 'stun:stun1.l.google.com:19302' }
+                ],
+
+                initHost: function() {
+                    this.isHost = true;
+                    CoreEngine.UIManager.showScreen('screen-mp-host');
+                    document.getElementById('host-step-label').innerText = 'Łączenie z serwerem...';
+                    
+                    this.ws = new WebSocket(this.signalingServerURL);
+                    
+                    this.ws.onopen = () => {
+                        this.ws.send(JSON.stringify({ type: 'create_lobby' }));
+                    };
+
+                    this.ws.onmessage = (event) => {
+                        const msg = JSON.parse(event.data);
+                        
+                        if (msg.type === 'lobby_created') {
+                            this.lobbyCode = msg.code;
+                            document.getElementById('host-step-label').innerText = `Kod lobby: ${msg.code}`;
+                            CoreEngine.UIManager.pushNotification(`Lobby: ${msg.code}`);
+                            this.hostCreateOffer();
+                        }
+                        else if (msg.type === 'player_joined') {
+                            CoreEngine.UIManager.pushNotification(`Gracz dołączył (${msg.playerCount})`);
+                        }
+                        else if (msg.type === 'signal') {
+                            this.hostHandleSignal(msg.data);
+                        }
+                        else if (msg.type === 'error') {
+                            CoreEngine.UIManager.pushNotification(`Błąd: ${msg.message}`);
+                        }
+                    };
+
+                    this.ws.onerror = () => {
+                        CoreEngine.UIManager.pushNotification('Błąd połączenia z serwerem!');
+                    };
+                },
+
+                hostCreateOffer: async function() {
+                    this.pc = new RTCPeerConnection({ iceServers: this.iceServers });
+                    
+                    this.dataChannel = this.pc.createDataChannel('game');
+                    this.setupDataChannel();
+
+                    this.pc.onicecandidate = (e) => {
+                        if (e.candidate) {
+                            this.ws.send(JSON.stringify({
+                                type: 'signal',
+                                code: this.lobbyCode,
+                                data: { ice: e.candidate }
+                            }));
+                        }
+                    };
+
+                    this.pc.onconnectionstatechange = () => {
+                        document.getElementById('host-conn-status').innerText = `Status: ${this.pc.connectionState}`;
+                        if (this.pc.connectionState === 'connected') {
+                            this.onConnected();
+                        }
+                    };
+
+                    const offer = await this.pc.createOffer();
+                    await this.pc.setLocalDescription(offer);
+
+                    this.ws.send(JSON.stringify({
+                        type: 'signal',
+                        code: this.lobbyCode,
+                        data: { offer: offer }
+                    }));
+
+                    document.getElementById('host-step1').style.display = 'none';
+                    document.getElementById('host-step2').style.display = 'block';
+                },
+
+                hostHandleSignal: async function(data) {
+                    if (data.answer) {
+                        await this.pc.setRemoteDescription(new RTCSessionDescription(data.answer));
+                    }
+                    else if (data.ice) {
+                        await this.pc.addIceCandidate(new RTCIceCandidate(data.ice));
+                    }
+                },
+
+                joinLobby: function() {
+                    const code = document.getElementById('join-code-input').value.toUpperCase().trim();
+                    if (code.length !== 9) {
+                        CoreEngine.UIManager.pushNotification('Kod musi mieć 9 znaków!');
+                        return;
+                    }
+                    
+                    this.isHost = false;
+                    this.lobbyCode = code;
+                    document.getElementById('join-step-label').innerText = 'Łączenie...';
+
+                    this.ws = new WebSocket(this.signalingServerURL);
+
+                    this.ws.onopen = () => {
+                        this.ws.send(JSON.stringify({ type: 'join_lobby', code: code }));
+                    };
+
+                    this.ws.onmessage = (event) => {
+                        const msg = JSON.parse(event.data);
+                        
+                        if (msg.type === 'signal') {
+                            this.joinHandleSignal(msg.data);
+                        }
+                        else if (msg.type === 'error') {
+                            CoreEngine.UIManager.pushNotification(`Błąd: ${msg.message}`);
+                        }
+                    };
+
+                    this.ws.onerror = () => {
+                        CoreEngine.UIManager.pushNotification('Błąd połączenia z serwerem!');
+                    };
+                },
+
+                joinHandleSignal: async function(data) {
+                    if (data.offer) {
+                        this.pc = new RTCPeerConnection({ iceServers: this.iceServers });
+
+                        this.pc.ondatachannel = (e) => {
+                            this.dataChannel = e.channel;
+                            this.setupDataChannel();
+                        };
+
+                        this.pc.onicecandidate = (e) => {
+                            if (e.candidate) {
+                                this.ws.send(JSON.stringify({
+                                    type: 'signal',
+                                    code: this.lobbyCode,
+                                    data: { ice: e.candidate }
+                                }));
+                            }
+                        };
+
+                        this.pc.onconnectionstatechange = () => {
+                            document.getElementById('join-conn-status').innerText = `Status: ${this.pc.connectionState}`;
+                            if (this.pc.connectionState === 'connected') {
+                                this.onConnected();
+                            }
+                        };
+
+                        await this.pc.setRemoteDescription(new RTCSessionDescription(data.offer));
+                        const answer = await this.pc.createAnswer();
+                        await this.pc.setLocalDescription(answer);
+
+                        this.ws.send(JSON.stringify({
+                            type: 'signal',
+                            code: this.lobbyCode,
+                            data: { answer: answer }
+                        }));
+
+                        document.getElementById('join-step1').style.display = 'none';
+                        document.getElementById('join-step2').style.display = 'block';
+                    }
+                    else if (data.ice) {
+                        await this.pc.addIceCandidate(new RTCIceCandidate(data.ice));
+                    }
+                },
+
+                setupDataChannel: function() {
+                    this.dataChannel.onopen = () => {
+                        console.log('[NetCore] DataChannel otwarty — P2P aktywny');
+                    };
+
+                    this.dataChannel.onmessage = (e) => {
+                        const msg = JSON.parse(e.data);
+                        this.handleGameMessage(msg);
+                    };
+
+                    this.dataChannel.onerror = (err) => {
+                        console.error('[NetCore] DataChannel error:', err);
+                    };
+                },
+
+                onConnected: function() {
+                    CoreEngine.UIManager.pushNotification('✓ Połączono P2P!');
+                    
+                    if (this.isHost) {
+                        document.getElementById('host-step2').style.display = 'none';
+                        document.getElementById('host-step3').style.display = 'block';
+                        document.getElementById('host-peers-list').innerText = '1 gracz połączony';
+                    } else {
+                        document.getElementById('join-step2').style.display = 'none';
+                        document.getElementById('join-step3').style.display = 'block';
+                    }
+
+                    if (this.ws) {
+                        this.ws.close();
+                        this.ws = null;
+                    }
+                },
+
+                sendGameData: function(data) {
+                    if (this.dataChannel && this.dataChannel.readyState === 'open') {
+                        this.dataChannel.send(JSON.stringify(data));
+                    }
+                },
+
+                handleGameMessage: function(msg) {
+                    if (msg.type === 'position') {
+                        console.log('Otrzymano pozycję:', msg);
+                    }
+                    else if (msg.type === 'start_game') {
+                        CoreEngine.SystemManager.bootSequence();
+                    }
+                },
+
+                hostStartGame: function() {
+                    this.sendGameData({ type: 'start_game' });
+                    CoreEngine.SystemManager.bootSequence();
+                },
+
+                joinReady: function() {
+                    this.sendGameData({ type: 'ready', vehicle: CoreEngine.State.selectedVehicleIdx });
+                    CoreEngine.UIManager.pushNotification('Czekam na start hosta...');
                 }
             },
 
@@ -835,18 +1109,34 @@
 
                     // Synchronizacja danych wyjściowych z układem interfejsu diagnostycznego HUD
                     CoreEngine.UIManager.renderHUD(currentSpeedKMH, state.rpm, state.currentGear, state);
+
+                    // Synchronizacja multiplayer — wysyłaj pozycję co ~5 klatek (60Hz/5 = 12Hz)
+                    if (CoreEngine.NetCore.dataChannel && CoreEngine.NetCore.dataChannel.readyState === 'open') {
+                        if (!this._syncCounter) this._syncCounter = 0;
+                        this._syncCounter++;
+                        if (this._syncCounter >= 5) {
+                            this._syncCounter = 0;
+                            CoreEngine.NetCore.sendGameData({
+                                type: 'position',
+                                x: state.posX,
+                                z: state.posZ,
+                                heading: state.heading,
+                                speed: state.speedMS
+                            });
+                        }
+                    }
                 }
             },
 
             // Moduł Zarządzania Widokami Interfejsu i Elementami DOM
             UIManager: {
                 currentScreen: 'screen-main',
-                allScreens: ['screen-main','screen-mode','screen-mp-menu','screen-mp-create','screen-mp-join'],
+                allScreens: ['screen-main','screen-mode','screen-mp-menu','screen-mp-host','screen-mp-join'],
 
                 init: function() {
                     this.showScreen('screen-main');
                     this.buildGarageMenu('dom-garage-grid', 'sp');
-                    this.buildGarageMenu('dom-garage-grid-mp-create', 'mp-create');
+                    this.buildGarageMenu('dom-garage-grid-mp-host', 'mp-host');
                     this.buildGarageMenu('dom-garage-grid-mp-join', 'mp-join');
                     this.clockInterval = setInterval(() => {
                         const d = new Date();
@@ -862,33 +1152,6 @@
                     const target = document.getElementById(screenId);
                     if(target) target.style.display = 'block';
                     this.currentScreen = screenId;
-
-                    if(screenId === 'screen-mp-create') {
-                        const code = Math.random().toString(36).substring(2,6).toUpperCase();
-                        document.getElementById('lobby-code-display').innerText = code;
-                        CoreEngine.State.lobbyCode = code;
-                        document.getElementById('lobby-waiting-status').innerText = 'Oczekiwanie na graczy...';
-                        document.getElementById('lobby-waiting-status').style.color = '#507a99';
-                        document.getElementById('mp-create-start-btn').style.display = 'none';
-                        setTimeout(() => {
-                            document.getElementById('lobby-waiting-status').innerText = '✓ Gracz dołączył! Możesz wystartować.';
-                            document.getElementById('lobby-waiting-status').style.color = 'var(--neon-green)';
-                            document.getElementById('mp-create-start-btn').style.display = 'block';
-                        }, 3000);
-                    }
-                },
-
-                joinLobby: function() {
-                    const code = document.getElementById('lobby-code-input').value;
-                    if(code.length < 4) {
-                        this.pushNotification('Wpisz 4-znakowy kod!');
-                        return;
-                    }
-                    this.pushNotification(`Łączenie z lobby: ${code}...`);
-                    setTimeout(() => {
-                        document.getElementById('screen-mp-join-cars').style.display = 'block';
-                        this.pushNotification('Połączono! Wybierz pojazd.');
-                    }, 1200);
                 },
 
                 buildGarageMenu: function(gridId, context) {
