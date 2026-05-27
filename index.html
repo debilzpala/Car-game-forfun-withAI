@@ -494,11 +494,16 @@
                 isHost: false,
                 lobbyCode: null,
                 connectedPeers: [],
-                signalingServerURL: 'ws://147.135.128.19:20088',
+                signalingServerURL: 'ws://localhost:3000', // ← TU WSTAW SWÓJ REPLIT URL
 
                 iceServers: [
                     { urls: 'stun:stun.l.google.com:19302' },
-                    { urls: 'stun:stun1.l.google.com:19302' }
+                    { urls: 'stun:stun1.l.google.com:19302' },
+                    {
+                        urls: ['turn:openrelay.metered.ca:80', 'turn:openrelay.metered.ca:443', 'turn:openrelay.metered.ca:80?transport=tcp'],
+                        username: 'openrelayproject',
+                        credential: 'openrelayproject'
+                    }
                 ],
 
                 initHost: function() {
@@ -514,6 +519,12 @@
 
                     this.ws.onmessage = (event) => {
                         const msg = JSON.parse(event.data);
+                        
+                        // Ping/pong keep-alive
+                        if (msg.type === 'ping') {
+                            this.ws.send(JSON.stringify({ type: 'pong' }));
+                            return;
+                        }
                         
                         if (msg.type === 'lobby_created') {
                             this.lobbyCode = msg.code;
@@ -601,6 +612,12 @@
 
                     this.ws.onmessage = (event) => {
                         const msg = JSON.parse(event.data);
+                        
+                        // Ping/pong keep-alive
+                        if (msg.type === 'ping') {
+                            this.ws.send(JSON.stringify({ type: 'pong' }));
+                            return;
+                        }
                         
                         if (msg.type === 'signal') {
                             this.joinHandleSignal(msg.data);
