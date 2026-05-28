@@ -532,10 +532,12 @@
                             this.lobbyCode = msg.code;
                             document.getElementById('host-step-label').innerText = `Kod lobby: ${msg.code}`;
                             CoreEngine.UIManager.pushNotification(`Lobby: ${msg.code}`);
-                            console.log('[NetCore] Host: Lobby created, now creating offer...');
-                            this.hostCreateOffer(); // ← WYWOŁAJ TERAZ
+                            console.log('[NetCore] Host: Lobby created, czekam na gracza...');
+                            // ← NE TWÓRZ OFFER TERAZ, czekaj na player_joined
                         }
                         else if (msg.type === 'player_joined') {
+                            console.log('[NetCore] Host: Gracz dołączył, tworzę offer...');
+                            this.hostCreateOffer(); // ← TUTAJ twórz offer
                             CoreEngine.UIManager.pushNotification(`Gracz dołączył (${msg.playerCount})`);
                         }
                         else if (msg.type === 'signal') {
