@@ -492,7 +492,7 @@
                 lobbyCode: null,
                 isHost: false,
                 connectedPlayers: {},
-                signalingServerURL: 'ws://145.239.69.111:20222',
+                signalingServerURL: 'ws://145.239.69.111:3000',
 
                 initHost: function() {
                     this.isHost = true;
@@ -1008,7 +1008,7 @@
                     CoreEngine.UIManager.renderHUD(currentSpeedKMH, state.rpm, state.currentGear, state);
 
                     // Synchronizacja multiplayer — wysyłaj pozycję co ~2 klatki (60Hz/2 = 30Hz)
-                    if (CoreEngine.NetCore.dataChannel && CoreEngine.NetCore.dataChannel.readyState === 'open') {
+                    if (CoreEngine.NetCore.ws && CoreEngine.NetCore.ws.readyState === WebSocket.OPEN) {
                         if (!this._syncCounter) this._syncCounter = 0;
                         this._syncCounter++;
                         if (this._syncCounter >= 2) {
@@ -1018,7 +1018,8 @@
                                 x: state.posX,
                                 z: state.posZ,
                                 heading: state.heading,
-                                speed: state.speedMS
+                                speed: state.speedMS,
+                                vehicle: CoreEngine.State.selectedVehicleIdx
                             });
                         }
                     }
@@ -1248,6 +1249,33 @@
 
                     // Aktualizacja procesów tła (atmosfera, pył miejski)
                     CoreEngine.RenderCore.updateParticles();
+
+                    // ===== RENDER DRUGIEGO GRACZA =====
+                    for (let playerId in CoreEngine.NetCore.connectedPlayers) {
+                        const otherPlayer = CoreEngine.NetCore.connectedPlayers[playerId];
+                        if (otherPlayer.x !== undefined && otherPlayer.vehicle !== undefined) {
+                            if (!window.otherPlayerModels) window.otherPlayerModels = {};
+                            if (!window.otherPlayerModels[playerId]) {
+                                // Załaduj model pojazdu drugiego gracza
+                                const vehicleData = CoreEngine.Database[otherPlayer.vehicle];
+                                CoreEngine.RenderCore.gltfLoader.load(`https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/models/gltf/${vehicleData.file}`, 
+                                    (gltf) => {
+                                        const model = gltf.scene;
+                                        model.scale.set(0.5, 0.5, 0.5);
+                                        CoreEngine.RenderCore.scene.add(model);
+                                        window.otherPlayerModels[playerId] = model;
+                                    }
+                                );
+                            }
+                            
+                            if (window.otherPlayerModels[playerId]) {
+                                window.otherPlayerModels[playerId].position.x = otherPlayer.x;
+                                window.otherPlayerModels[playerId].position.z = otherPlayer.z;
+                                window.otherPlayerModels[playerId].position.y = 0;
+                                window.otherPlayerModels[playerId].rotation.y = otherPlayer.heading || 0;
+                            }
+                        }
+                    }
 
                     // Wywołanie sprzętowe klatki renderu
                     CoreEngine.RenderCore.renderer.render(CoreEngine.RenderCore.scene, CoreEngine.RenderCore.camera);
