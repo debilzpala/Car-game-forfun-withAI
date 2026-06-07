@@ -489,22 +489,10 @@
             // ====================================================================
             NetCore: {
                 ws: null,
-                pc: null,
-                dataChannel: null,
-                isHost: false,
                 lobbyCode: null,
-                connectedPeers: [],
-                signalingServerURL: 'ws://147.135.128.19:20088', // ← TU WSTAW SWÓJ REPLIT URL
-
-                iceServers: [
-                    { urls: 'stun:stun.l.google.com:19302' },
-                    { urls: 'stun:stun1.l.google.com:19302' },
-                    {
-                        urls: ['turn:openrelay.metered.ca:80', 'turn:openrelay.metered.ca:443', 'turn:openrelay.metered.ca:80?transport=tcp'],
-                        username: 'openrelayproject',
-                        credential: 'openrelayproject'
-                    }
-                ],
+                isHost: false,
+                connectedPlayers: {},
+                signalingServerURL: 'ws://147.135.128.19:20088',
 
                 initHost: function() {
                     this.isHost = true;
@@ -514,15 +502,14 @@
                     this.ws = new WebSocket(this.signalingServerURL);
                     
                     this.ws.onopen = () => {
-                        console.log('[NetCore] Host: WebSocket connected, creating lobby...');
+                        console.log('[NetCore] Host: WebSocket connected');
                         this.ws.send(JSON.stringify({ type: 'create_lobby' }));
                     };
 
                     this.ws.onmessage = (event) => {
                         const msg = JSON.parse(event.data);
-                        console.log('[NetCore] Host received:', msg.type);
+                        console.log('[NetCore] Host:', msg.type);
                         
-                        // Ping/pong keep-alive
                         if (msg.type === 'ping') {
                             this.ws.send(JSON.stringify({ type: 'pong' }));
                             return;
@@ -530,236 +517,105 @@
                         
                         if (msg.type === 'lobby_created') {
                             this.lobbyCode = msg.code;
-                            document.getElementById('host-step-label').innerText = `Kod lobby: ${msg.code}`;
+                            document.getElementById('host-step-label').innerText = `Kod: ${msg.code}`;
                             CoreEngine.UIManager.pushNotification(`Lobby: ${msg.code}`);
-                            console.log('[NetCore] Host: Lobby created, czekam na gracza...');
-                            // ← NE TWÓRZ OFFER TERAZ, czekaj na player_joined
+                            document.getElementById('host-step1').style.display = 'none';
+                            document.getElementById('host-step2').style.display = 'block';
                         }
                         else if (msg.type === 'player_joined') {
-                            console.log('[NetCore] Host: Gracz dołączył, tworzę offer...');
-                            this.hostCreateOffer(); // ← TUTAJ twórz offer
-                            CoreEngine.UIManager.pushNotification(`Gracz dołączył (${msg.playerCount})`);
+                            CoreEngine.UIManager.pushNotification(`Gracz dołączył!`);
+                            document.getElementById('host-conn-status').innerText = `✓ Połączono`;
+                            document.getElementById('host-step2').style.display = 'none';
+                            document.getElementById('host-step3').style.display = 'block';
                         }
-                        else if (msg.type === 'signal') {
-                            this.hostHandleSignal(msg.data);
-                        }
-                        else if (msg.type === 'error') {
-                            CoreEngine.UIManager.pushNotification(`Błąd: ${msg.message}`);
+                        else if (msg.type === 'game_data') {
+                            this.handleGameData(msg);
                         }
                     };
 
-                    this.ws.onerror = (err) => {
-                        console.error('[NetCore] Host WebSocket error:', err);
-                        CoreEngine.UIManager.pushNotification('Błąd połączenia z serwerem!');
+                    this.ws.onerror = () => {
+                        CoreEngine.UIManager.pushNotification('Błąd serwera!');
                     };
-                },
-
-                hostCreateOffer: async function() {
-                    try {
-                        this.pc = new RTCPeerConnection({ iceServers: this.iceServers });
-                        
-                        this.dataChannel = this.pc.createDataChannel('game');
-                        this.setupDataChannel();
-
-                        this.pc.onicecandidate = (e) => {
-                            if (e.candidate) {
-                                this.ws.send(JSON.stringify({
-                                    type: 'signal',
-                                    code: this.lobbyCode,
-                                    data: { ice: e.candidate }
-                                }));
-                            }
-                        };
-
-                        this.pc.onconnectionstatechange = () => {
-                            console.log('[NetCore] Host connection state:', this.pc.connectionState);
-                            document.getElementById('host-conn-status').innerText = `Status: ${this.pc.connectionState}`;
-                            if (this.pc.connectionState === 'connected') {
-                                this.onConnected();
-                            }
-                        };
-
-                        const offer = await this.pc.createOffer();
-                        await this.pc.setLocalDescription(offer);
-
-                        console.log('[NetCore] Host sending offer...');
-                        this.ws.send(JSON.stringify({
-                            type: 'signal',
-                            code: this.lobbyCode,
-                            data: { offer: offer }
-                        }));
-
-                        document.getElementById('host-step1').style.display = 'none';
-                        document.getElementById('host-step2').style.display = 'block';
-                    } catch (err) {
-                        console.error('[NetCore] Host offer error:', err);
-                        CoreEngine.UIManager.pushNotification('Błąd WebRTC!');
-                    }
-                },
-
-                hostHandleSignal: async function(data) {
-                    if (data.answer) {
-                        await this.pc.setRemoteDescription(new RTCSessionDescription(data.answer));
-                    }
-                    else if (data.ice) {
-                        await this.pc.addIceCandidate(new RTCIceCandidate(data.ice));
-                    }
                 },
 
                 joinLobby: function() {
                     const code = document.getElementById('join-code-input').value.toUpperCase().trim();
                     if (code.length !== 9) {
-                        CoreEngine.UIManager.pushNotification('Kod musi mieć 9 znaków!');
+                        CoreEngine.UIManager.pushNotification('9 znaków!');
                         return;
                     }
                     
                     this.isHost = false;
                     this.lobbyCode = code;
-                    document.getElementById('join-step-label').innerText = 'Łączenie...';
 
                     this.ws = new WebSocket(this.signalingServerURL);
 
                     this.ws.onopen = () => {
-                        console.log('[NetCore] Player: WebSocket connected, joining lobby...');
                         this.ws.send(JSON.stringify({ type: 'join_lobby', code: code }));
                     };
 
                     this.ws.onmessage = (event) => {
                         const msg = JSON.parse(event.data);
-                        console.log('[NetCore] Player received:', msg.type);
                         
-                        // Ping/pong keep-alive
                         if (msg.type === 'ping') {
                             this.ws.send(JSON.stringify({ type: 'pong' }));
                             return;
                         }
                         
-                        if (msg.type === 'signal') {
-                            this.joinHandleSignal(msg.data);
-                        }
-                        else if (msg.type === 'error') {
-                            CoreEngine.UIManager.pushNotification(`Błąd: ${msg.message}`);
-                        }
-                    };
-
-                    this.ws.onerror = (err) => {
-                        console.error('[NetCore] Player WebSocket error:', err);
-                        CoreEngine.UIManager.pushNotification('Błąd połączenia z serwerem!');
-                    };
-                },
-
-                joinHandleSignal: async function(data) {
-                    try {
-                        if (data.offer) {
-                            this.pc = new RTCPeerConnection({ iceServers: this.iceServers });
-
-                            this.pc.ondatachannel = (e) => {
-                                this.dataChannel = e.channel;
-                                this.setupDataChannel();
-                            };
-
-                            this.pc.onicecandidate = (e) => {
-                                if (e.candidate) {
-                                    this.ws.send(JSON.stringify({
-                                        type: 'signal',
-                                        code: this.lobbyCode,
-                                        data: { ice: e.candidate }
-                                    }));
-                                }
-                            };
-
-                            this.pc.onconnectionstatechange = () => {
-                                console.log('[NetCore] Player connection state:', this.pc.connectionState);
-                                document.getElementById('join-conn-status').innerText = `Status: ${this.pc.connectionState}`;
-                                if (this.pc.connectionState === 'connected') {
-                                    this.onConnected();
-                                }
-                            };
-
-                            await this.pc.setRemoteDescription(new RTCSessionDescription(data.offer));
-                            const answer = await this.pc.createAnswer();
-                            await this.pc.setLocalDescription(answer);
-
-                            console.log('[NetCore] Player sending answer...');
-                            this.ws.send(JSON.stringify({
-                                type: 'signal',
-                                code: this.lobbyCode,
-                                data: { answer: answer }
-                            }));
-
+                        if (msg.type === 'lobby_joined') {
+                            CoreEngine.UIManager.pushNotification(`✓ Połączono!`);
                             document.getElementById('join-step1').style.display = 'none';
-                            document.getElementById('join-step2').style.display = 'block';
+                            document.getElementById('join-step3').style.display = 'block';
                         }
-                        else if (data.ice) {
-                            await this.pc.addIceCandidate(new RTCIceCandidate(data.ice));
+                        else if (msg.type === 'start_game') {
+                            CoreEngine.SystemManager.bootSequence();
                         }
-                    } catch (err) {
-                        console.error('[NetCore] Player signal error:', err);
-                        CoreEngine.UIManager.pushNotification('Błąd WebRTC!');
-                    }
-                },
-
-                setupDataChannel: function() {
-                    this.dataChannel.onopen = () => {
-                        console.log('[NetCore] DataChannel otwarty — P2P aktywny');
+                        else if (msg.type === 'game_data') {
+                            this.handleGameData(msg);
+                        }
                     };
 
-                    this.dataChannel.onmessage = (e) => {
-                        const msg = JSON.parse(e.data);
-                        this.handleGameMessage(msg);
-                    };
-
-                    this.dataChannel.onerror = (err) => {
-                        console.error('[NetCore] DataChannel error:', err);
+                    this.ws.onerror = () => {
+                        CoreEngine.UIManager.pushNotification('Błąd!');
                     };
                 },
 
-                onConnected: function() {
-                    CoreEngine.UIManager.pushNotification('✓ Połączono P2P!');
-                    
-                    if (this.isHost) {
-                        document.getElementById('host-step2').style.display = 'none';
-                        document.getElementById('host-step3').style.display = 'block';
-                        document.getElementById('host-peers-list').innerText = '1 gracz połączony';
-                    } else {
-                        document.getElementById('join-step2').style.display = 'none';
-                        document.getElementById('join-step3').style.display = 'block';
+                handleGameData: function(msg) {
+                    if (msg.data && msg.data.x !== undefined) {
+                        if (!this.connectedPlayers[msg.from]) {
+                            this.connectedPlayers[msg.from] = {};
+                        }
+                        Object.assign(this.connectedPlayers[msg.from], msg.data);
                     }
-
-                    // ❌ NE ZAMYKAJ WEBSOCKET — trzeba go na dane gry!
-                    // if (this.ws) {
-                    //     this.ws.close();
-                    //     this.ws = null;
-                    // }
                 },
 
                 sendGameData: function(data) {
-                    if (this.dataChannel && this.dataChannel.readyState === 'open') {
-                        this.dataChannel.send(JSON.stringify(data));
-                    }
-                },
-
-                handleGameMessage: function(msg) {
-                    if (msg.type === 'position') {
-                        console.log('Otrzymano pozycję:', msg);
-                    }
-                    else if (msg.type === 'start_game') {
-                        CoreEngine.SystemManager.bootSequence();
+                    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                        this.ws.send(JSON.stringify({
+                            type: 'game_data',
+                            code: this.lobbyCode,
+                            data: data
+                        }));
                     }
                 },
 
                 hostStartGame: function() {
-                    this.sendGameData({ type: 'start_game' });
+                    this.ws.send(JSON.stringify({
+                        type: 'start_game',
+                        code: this.lobbyCode,
+                        vehicle: CoreEngine.State.selectedVehicleIdx
+                    }));
                     CoreEngine.SystemManager.bootSequence();
                 },
 
                 joinReady: function() {
-                    this.sendGameData({ type: 'ready', vehicle: CoreEngine.State.selectedVehicleIdx });
-                    CoreEngine.UIManager.pushNotification('Czekam na start hosta...');
+                    this.ws.send(JSON.stringify({
+                        type: 'ready',
+                        code: this.lobbyCode,
+                        vehicle: CoreEngine.State.selectedVehicleIdx
+                    }));
                 }
             },
-
-            // Moduł Renderowania 3D i Sceny Three.js
             RenderCore: {
                 scene: null,
                 camera: null,
