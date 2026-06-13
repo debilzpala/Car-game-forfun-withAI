@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CyberRide (Working MP)</title>
+    <title>CyberCore Engine v4.0 - Monolith Edition</title>
     <style>
         :root {
             --neon-cyan: #00e5ff;
@@ -418,7 +418,7 @@
                 {
                     id: 1,
                     name: "Porsche 911 Turbo",
-                    file: "porshe.glb",
+                    file: "porsche.glb",
                     mass: 1470,
                     maxForce: 10500,
                     maxSpeed: 315,
@@ -438,7 +438,7 @@
                 {
                     id: 2,
                     name: "Kamikaze K1",
-                    file: "Kamikaze.glb",
+                    file: "kamikaze.glb",
                     mass: 48,
                     maxForce: 1100,
                     maxSpeed: 82,
@@ -492,7 +492,7 @@
                 lobbyCode: null,
                 isHost: false,
                 connectedPlayers: {},
-                signalingServerURL: 'ws://145.239.69.111:20222',
+                signalingServerURL: 'ws://145.239.69.111:3000',
 
                 initHost: function() {
                     this.isHost = true;
@@ -1253,27 +1253,23 @@
                     // ===== RENDER DRUGIEGO GRACZA =====
                     for (let playerId in CoreEngine.NetCore.connectedPlayers) {
                         const otherPlayer = CoreEngine.NetCore.connectedPlayers[playerId];
-                        if (otherPlayer.x !== undefined && otherPlayer.vehicle !== undefined) {
-                            if (!window.otherPlayerModels) window.otherPlayerModels = {};
-                            if (!window.otherPlayerModels[playerId]) {
-                                // Załaduj model pojazdu drugiego gracza
-                                const vehicleData = CoreEngine.Database[otherPlayer.vehicle];
-                                CoreEngine.RenderCore.gltfLoader.load(`https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/models/gltf/${vehicleData.file}`, 
-                                    (gltf) => {
-                                        const model = gltf.scene;
-                                        model.scale.set(0.5, 0.5, 0.5);
-                                        CoreEngine.RenderCore.scene.add(model);
-                                        window.otherPlayerModels[playerId] = model;
-                                    }
+                        if (otherPlayer.x !== undefined) {
+                            if (!window.otherPlayerMeshes) window.otherPlayerMeshes = {};
+                            if (!window.otherPlayerMeshes[playerId]) {
+                                const colors = [0xff0000, 0x00ff00, 0x0000ff]; // Red, Green, Blue
+                                const color = colors[otherPlayer.vehicle || 0];
+                                const mesh = new THREE.Mesh(
+                                    new THREE.BoxGeometry(2, 1.5, 4),
+                                    new THREE.MeshPhongMaterial({ color: color })
                                 );
+                                CoreEngine.RenderCore.scene.add(mesh);
+                                window.otherPlayerMeshes[playerId] = mesh;
                             }
                             
-                            if (window.otherPlayerModels[playerId]) {
-                                window.otherPlayerModels[playerId].position.x = otherPlayer.x;
-                                window.otherPlayerModels[playerId].position.z = otherPlayer.z;
-                                window.otherPlayerModels[playerId].position.y = 0;
-                                window.otherPlayerModels[playerId].rotation.y = otherPlayer.heading || 0;
-                            }
+                            window.otherPlayerMeshes[playerId].position.x = otherPlayer.x;
+                            window.otherPlayerMeshes[playerId].position.z = otherPlayer.z;
+                            window.otherPlayerMeshes[playerId].position.y = 0.75;
+                            window.otherPlayerMeshes[playerId].rotation.y = otherPlayer.heading || 0;
                         }
                     }
 
